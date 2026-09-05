@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a reproducible backend defect.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and evidence
+      description: Remove secrets and personal/payment data before attaching evidence.
+  - type: input
+    id: environment
+    attributes:
+      label: Environment and revision
+    validations:
+      required: true

@@ -1,0 +1,50 @@
+name: Backend feature
+description: Plan an approved backend change within one ownership domain.
+title: "[Backend] "
+labels: ["backend"]
+body:
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Ownership domain
+      options:
+        - accounts
+        - operations
+        - bookings
+        - payments
+        - common
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Approved source and rules
+      description: Link the relevant requirements, business rules, API contract, and open-question decisions.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: State what is included and explicitly excluded.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: schema
+    attributes:
+      label: Schema and migration impact
+      description: State tables, constraints, migration order, and MySQL-specific operations.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Verification plan
+    validations:
+      required: true
