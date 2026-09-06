@@ -1,7 +1,8 @@
 __pycache__/
 *.py[cod]
 .venv/
-backend-python/.envnode_modules
+backend-python/.env
+node_modules/
 backend/target/
 
 # Vite cache
