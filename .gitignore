@@ -31,3 +31,9 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.local

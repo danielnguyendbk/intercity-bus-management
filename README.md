@@ -1,67 +1,104 @@
-# Intercity Bus Management Backend
+# Intercity Bus Management — Monorepo
 
-Phase 1 foundation for the university Intercity Bus Management System. The repository currently provides Django configuration, the accounts schema foundation, session authentication, Google social-account configuration, Django Admin, health checking, app boundaries, tests, and CI. Operations, booking, payment, and reporting workflows are intentionally not implemented yet.
+Dự án quản lý xe khách liên tỉnh. Kiến trúc **Monorepo** gồm 2 module độc lập:
 
-## Approved runtime
+| Thư mục | Stack | Mô tả |
+|---|---|---|
+| [`backend/`](backend/) | Python 3.12 · Django 5.2 · DRF · MySQL 8 | REST API, Business Logic, DB |
+| [`frontend/`](frontend/) | React 18 · Vite · TypeScript · Tailwind CSS | Giao diện người dùng |
 
-- Python 3.12
-- Django 5.2.17
-- Django REST Framework 3.18.0
-- django-allauth 65.19.2 with `socialaccount`
-- mysqlclient 2.2.8
-- MySQL 8.0+
+---
 
-## Local setup (PowerShell)
+## Backend (Django)
 
-Create an empty local database and user in MySQL. Do not execute `docs/Database_IntercityBusManagement.sql`; Django migrations are authoritative.
+### Yêu cầu runtime
+- Python 3.12, Django 5.2.17, DRF 3.18.0, mysqlclient 2.2.8, MySQL 8.0+
+
+### Setup (PowerShell)
 
 ```powershell
-cd 'D:\Documents\PTIT DOC\Python\intercity-bus-management'
+# 1. Tạo virtualenv
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+
+# 2. Cấu hình biến môi trường — copy .env.example -> .env bên trong backend/
+Copy-Item backend\.env.example backend\.env
+# Điền các giá trị thực vào backend/.env
+
+# 3. Migrate & chạy server
+.\.venv\Scripts\python.exe backend\manage.py migrate
+.\.venv\Scripts\python.exe backend\manage.py runserver
 ```
 
-Copy `.env.example` to `.env` and replace the placeholder values, or export the same environment variables in PowerShell. Django loads the repository-root `.env` file through `python-dotenv`.
+### Kiểm tra
 
 ```powershell
-$env:DJANGO_SECRET_KEY='replace-for-local-development'
-$env:DJANGO_DEBUG='True'
-$env:MYSQL_DATABASE='intercity_bus_management'
-$env:MYSQL_USER='intercity_bus_app'
-$env:MYSQL_PASSWORD='replace-with-local-password'
-$env:MYSQL_HOST='127.0.0.1'
-$env:MYSQL_PORT='3306'
-.\.venv\Scripts\python.exe manage.py migrate
-.\.venv\Scripts\python.exe manage.py runserver
+.\.venv\Scripts\python.exe backend\manage.py check
+.\.venv\Scripts\python.exe backend\manage.py test
 ```
 
-Useful checks:
+**Health endpoint**: `GET http://127.0.0.1:8000/health/`
+
+### URL namespaces
+
+- `/admin/` — Django Admin only
+- `/health/` — Health check
+- `/api/accounts/`, `/api/operations/`, `/api/bookings/`, `/api/payments/`, `/api/common/` — Business API
+
+---
+
+## Frontend (React + Vite)
+
+### Setup
 
 ```powershell
-.\.venv\Scripts\python.exe manage.py check
-.\.venv\Scripts\python.exe manage.py test
+cd frontend
+npm install
 ```
 
-Health endpoint: `GET http://127.0.0.1:8000/health/`.
+### Chạy dev server (Mock Mode — không cần backend)
 
-## URL namespaces
+```powershell
+cd frontend
+# .env đã có VITE_USE_MOCK=true sẵn
+npm run dev
+```
 
-- `/admin/`: Django Admin only.
-- `/accounts/`: django-allauth URL skeleton.
-- `/health/`: foundation health endpoint.
-- `/api/accounts/`, `/api/operations/`, `/api/bookings/`, `/api/payments/`, `/api/common/`: business app URL skeletons.
+Mở trình duyệt tại **http://localhost:4173** (hoặc cổng Vite hiển thị).
+
+**Tài khoản demo mock:**
+| Username | Role | Ghi chú |
+|---|---|---|
+| `admin` | ADMIN | Quản lý toàn hệ thống |
+| `staff01` | STAFF | Điều phối viên |
+| `customer01` | CUSTOMER | Khách đặt vé |
+
+### Chạy với Backend thật
+
+```powershell
+# Sửa frontend/.env
+VITE_USE_MOCK=false
+VITE_API_BASE_URL=http://localhost:8000/api
+
+npm run dev
+```
+
+### Build production
+
+```powershell
+cd frontend
+npm run build
+```
+
+---
 
 ## Schema workflow
 
-`docs/Database_IntercityBusManagement.sql` is the approved reference, not a second migration mechanism. Create or change application tables only through reviewed Django migrations. MySQL-specific generated columns, triggers, and views belong in isolated explicit migrations in their owning app.
+`docs/Database_IntercityBusManagement.sql` là tài liệu tham chiếu, **không phải** migration mechanism. Tạo/thay đổi bảng chỉ qua Django migrations đã review. MySQL generated columns, triggers, views thuộc về isolated explicit migrations trong owning app.
 
-See `docs/IMPLEMENTATION_PLAN.md` and `docs/OPEN_QUESTIONS.md` before starting later phases.
+## Tài liệu
 
-## Intentionally unimplemented after Phase 1
-
-- Register/login business API or UI and the complete explicit Google-linking UX.
-- Employee CRUD.
-- Station, route, bus, seat, trip, and staff-assignment models/workflows.
-- Booking, ticket, availability locking, and expiration workflows.
-- Cash/SePay payment processing, webhook handling, reconciliation, and reporting.
-- MySQL generated-column, trigger, and view migrations.
+- [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md)
+- [`docs/BUSINESS_RULES.md`](docs/BUSINESS_RULES.md)
+- [`docs/TASK_ASSIGNMENT.md`](docs/TASK_ASSIGNMENT.md)
+- [`docs/OPEN_QUESTIONS.md`](docs/OPEN_QUESTIONS.md)
