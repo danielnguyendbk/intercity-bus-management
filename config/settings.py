@@ -142,3 +142,41 @@ SOCIALACCOUNT_PROVIDERS = {
         "AUTH_PARAMS": {"access_type": "online"},
     }
 }
+
+# ── SePay / VietQR Configuration ──────────────────────────────────────────
+# Required in non-DEBUG environments; safe placeholders allowed locally.
+# Never log the full secret value or bank account number — use redacted representation only.
+
+SEPAY_WEBHOOK_SECRET: str = os.getenv("SEPAY_WEBHOOK_SECRET", "")
+SEPAY_BANK_ACCOUNT_NUMBER: str = os.getenv("SEPAY_BANK_ACCOUNT_NUMBER", "")
+SEPAY_BANK_ACCOUNT_NAME: str = os.getenv("SEPAY_BANK_ACCOUNT_NAME", "")
+SEPAY_BANK_CODE: str = os.getenv("SEPAY_BANK_CODE", "")
+SEPAY_WEBHOOK_MAX_AGE_SECONDS: int = int(
+    os.getenv("SEPAY_WEBHOOK_MAX_AGE_SECONDS", "300")
+)
+SEPAY_CALLBACK_BASE_URL: str = os.getenv("SEPAY_CALLBACK_BASE_URL", "")
+
+# API-08: SePay signature header/timestamp fields are PENDING resolution.
+# Do not implement signature verification until API-08 is resolved.
+
+
+def _validate_sepay_config() -> None:
+    if not DEBUG:
+        missing = []
+        if not SEPAY_WEBHOOK_SECRET:
+            missing.append("SEPAY_WEBHOOK_SECRET")
+        if not SEPAY_BANK_ACCOUNT_NUMBER:
+            missing.append("SEPAY_BANK_ACCOUNT_NUMBER")
+        if not SEPAY_BANK_ACCOUNT_NAME:
+            missing.append("SEPAY_BANK_ACCOUNT_NAME")
+        if not SEPAY_BANK_CODE:
+            missing.append("SEPAY_BANK_CODE")
+        if missing:
+            from django.core.exceptions import ImproperlyConfigured
+
+            raise ImproperlyConfigured(
+                f"Missing required SePay configuration settings for production: {', '.join(missing)}"
+            )
+
+
+_validate_sepay_config()
