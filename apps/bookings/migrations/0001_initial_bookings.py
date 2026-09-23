@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('operations', '0002_add_trips_and_assignments'),
+        ('operations', '0003_add_seats_routes_trips'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

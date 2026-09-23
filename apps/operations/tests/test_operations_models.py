@@ -20,7 +20,7 @@ class OperationsModelTests(TestCase):
         )
 
     def test_station_creation(self):
-        self.assertEqual(str(self.station_hn), "BX-HN - Bến xe Mỹ Đình (Hà Nội)")
+        self.assertEqual(str(self.station_hn), "BX-HN - Bến xe Mỹ Đình")
         with self.assertRaises(IntegrityError):
             Station.objects.create(
                 station_code="BX-HN",
@@ -71,7 +71,7 @@ class OperationsModelTests(TestCase):
             seat_capacity=40,
             status=Bus.Status.ACTIVE,
         )
-        self.assertEqual(str(bus), "29B-12345 (SLEEPER - 40 seats)")
+        self.assertEqual(str(bus), "29B-12345 - SLEEPER")
 
         seat = BusSeat.objects.create(
             bus=bus,

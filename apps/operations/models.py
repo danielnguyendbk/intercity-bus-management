@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-
+from django.core.validators import MinValueValidator
 
 class Station(models.Model):
     station_code = models.CharField(max_length=20, unique=True)
@@ -15,7 +15,7 @@ class Station(models.Model):
         db_table = "stations"
 
     def __str__(self) -> str:
-        return f"{self.station_code} - {self.name} ({self.province_city})"
+        return f"{self.station_code} - {self.name}"
 
 
 class Route(models.Model):
@@ -75,20 +75,23 @@ class Route(models.Model):
 
 class Bus(models.Model):
     class BusType(models.TextChoices):
-        SEATER = "SEATER", "Seater"
-        SLEEPER = "SLEEPER", "Sleeper"
-        LIMOUSINE = "LIMOUSINE", "Limousine"
+        SEATER = "SEATER", "SEATER"
+        SLEEPER = "SLEEPER", "SLEEPER"
+        LIMOUSINE = "LIMOUSINE", "LIMOUSINE"
 
-    class Status(models.TextChoices):
-        ACTIVE = "ACTIVE", "Active"
-        MAINTENANCE = "MAINTENANCE", "Maintenance"
-        INACTIVE = "INACTIVE", "Inactive"
+    class BusStatus(models.TextChoices):
+        ACTIVE = "ACTIVE", "ACTIVE"
+        MAINTENANCE = "MAINTENANCE", "MAINTENANCE"
+        INACTIVE = "INACTIVE", "INACTIVE"
+
+    # Backward compatibility alias
+    Status = BusStatus
 
     license_plate = models.CharField(max_length=20, unique=True)
     bus_name = models.CharField(max_length=100, null=True, blank=True)
-    bus_type = models.CharField(max_length=20, choices=BusType)
-    seat_capacity = models.PositiveSmallIntegerField()
-    status = models.CharField(max_length=20, choices=Status, default=Status.ACTIVE)
+    bus_type = models.CharField(max_length=20, choices=BusType.choices)
+    seat_capacity = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    status = models.CharField(max_length=20, choices=BusStatus.choices, default=BusStatus.ACTIVE)
     last_maintenance_date = models.DateField(null=True, blank=True)
     insurance_expiry = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -109,7 +112,7 @@ class Bus(models.Model):
             raise ValidationError("Seat capacity must be greater than 0.")
 
     def __str__(self) -> str:
-        return f"{self.license_plate} ({self.bus_type} - {self.seat_capacity} seats)"
+        return f"{self.license_plate} - {self.bus_type}"
 
 
 class BusSeat(models.Model):
