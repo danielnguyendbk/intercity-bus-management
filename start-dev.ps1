@@ -4,8 +4,8 @@
 Write-Host "Starting Bus Management Dev Environment..." -ForegroundColor Green
 
 # Start backend
-Write-Host "Starting backend (Spring Boot)..." -ForegroundColor Yellow
-Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", "cd backend; mvn spring-boot:run" -WindowStyle Normal
+Write-Host "Starting backend (Python FastAPI)..." -ForegroundColor Yellow
+Start-Process -FilePath "powershell" -ArgumentList "-NoExit", "-Command", "cd backend-python; .\venv\Scripts\python.exe run.py" -WindowStyle Normal
 
 Start-Sleep 5
 
