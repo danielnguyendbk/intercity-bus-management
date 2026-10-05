@@ -117,7 +117,7 @@ def get_trip_detail(trip_id: int, db: Session = Depends(get_db)):
         passenger = ticket.passenger if ticket else None
         seats.append({"id": seat.id, "seatNumber": seat.seatNumber, "positionX": seat.positionX, "positionY": seat.positionY, "booked": ticket is not None, "bookedBy": passenger.phone if passenger else "", "passengerName": passenger.fullName if passenger else ""})
         if ticket:
-            tickets.append({"id": ticket.id, "seatNumber": seat.seatNumber, "passengerName": passenger.fullName if passenger else "", "passengerPhone": passenger.phone if passenger else "", "price": ticket.price, "status": ticket.status.value, "bookedAt": ticket.bookedAt, "pickupPoint": ticket.pickupPoint, "dropoffPoint": ticket.dropoffPoint, "paymentMethod": ticket.payment.paymentMethod.value if ticket.payment else None, "paymentStatus": ticket.payment.status.value if ticket.payment else None, "paidAt": ticket.paidAt})
+            tickets.append({"id": ticket.id, "seatNumber": seat.seatNumber, "passengerName": passenger.fullName if passenger else "", "passengerPhone": passenger.phone if passenger else "", "price": ticket.price, "status": ticket.status.value, "bookedAt": ticket.bookedAt, "pickupPoint": ticket.pickupPoint, "dropoffPoint": ticket.dropoffPoint, "paymentMethod": ticket.payment.paymentMethod.value if ticket.payment and hasattr(ticket.payment.paymentMethod, "value") else (ticket.payment.paymentMethod if ticket.payment else None), "paymentStatus": ticket.payment.status.value if ticket.payment else None, "paidAt": ticket.paidAt})
     route = trip.route
     bus = trip.bus
     return {**_trip_response(trip), "route": {"id": route.id, "origin": route.origin, "destination": route.destination, "distanceKm": route.distanceKm, "estimatedDurationMin": route.estimatedDurationMin, "basePrice": route.basePrice} if route else None, "bus": {"id": bus.id, "licensePlate": bus.licensePlate, "busType": bus.busType.value if bus.busType else "", "totalSeats": bus.totalSeats, "status": bus.status.value if bus.status else ""} if bus else None, "seats": seats, "tickets": tickets, "estimatedRevenue": sum((ticket.price or 0) for ticket in trip.tickets if ticket.status not in active_statuses), "actualRevenue": sum((ticket.price or 0) for ticket in trip.tickets if ticket.status == TicketStatus.PAID)}
@@ -281,7 +281,7 @@ def get_ticket_detail(ticket_id: int, db: Session = Depends(get_db)):
         "passenger": {"id": passenger.id, "fullName": passenger.fullName, "phone": passenger.phone, "email": passenger.email or "", "idCard": passenger.idCard or ""} if passenger else None,
         "price": ticket.price, "status": ticket.status.value if ticket.status else "", "user": {"id": ticket.user.id, "username": ticket.user.username, "role": ticket.user.role.name if ticket.user and ticket.user.role else ""} if ticket.user else None,
         "bookedAt": ticket.bookedAt, "paidAt": ticket.paidAt,
-        "payment": {"id": payment.id, "amount": payment.amount, "paymentMethod": payment.paymentMethod.value, "status": payment.status.value, "transactionCode": payment.transactionCode, "paidAt": payment.paidAt} if payment else None,
+        "payment": {"id": payment.id, "amount": payment.amount, "paymentMethod": payment.paymentMethod.value if hasattr(payment.paymentMethod, "value") else payment.paymentMethod, "status": payment.status.value, "transactionCode": payment.transactionCode, "paidAt": payment.paidAt} if payment else None,
     }
 
 @router.put("/tickets/{ticket_id}/confirm")

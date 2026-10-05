@@ -99,7 +99,9 @@
 ### 2. Chạy Frontend
 
 ```bash
-# Cài đặt dependencies
+cd frontend
+
+# Cài đặt dependencies (nếu chưa cài)
 npm install
 
 # Khởi động server (chạy trên localhost:4173)

@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
 .venv/
+venv/
+backend-python/venv/
 backend-python/.env
 node_modules/
 backend/target/

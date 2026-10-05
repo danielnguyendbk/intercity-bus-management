@@ -302,7 +302,11 @@ class BookingService:
             bookedAt=ticket.bookedAt,
             paidAt=ticket.paidAt,
             paymentId=payment.id if payment else None,
-            paymentMethod=payment.paymentMethod.value if payment and payment.paymentMethod else None,
+            paymentMethod=(
+                payment.paymentMethod.value
+                if payment and hasattr(payment.paymentMethod, "value")
+                else (payment.paymentMethod if payment else None)
+            ),
             paymentStatus=payment.status.value if payment and payment.status else None,
             transactionCode=payment.transactionCode if payment else None,
             transactionTime=payment.paidAt if payment else None,

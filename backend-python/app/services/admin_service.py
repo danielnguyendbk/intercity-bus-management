@@ -449,19 +449,34 @@ class AdminService:
             p = t.passenger
             r = t.trip.route if t.trip else None
             route_str = f"{r.origin} - {r.destination}" if r else ""
+            bus = t.trip.bus if t.trip else None
+            bus_type_str = bus.busType.value if (bus and hasattr(bus.busType, "value")) else (bus.busType if bus else "")
+            bus_str = f"{bus.licensePlate} ({bus_type_str})" if bus else ""
             t_code = f"BUS-{t.bookedAt.strftime('%Y%m%d') if t.bookedAt else '2026'}-{t.id:05d}"
+            
+            pm_str = None
+            if t.payment and t.payment.paymentMethod:
+                pm_str = t.payment.paymentMethod.value if hasattr(t.payment.paymentMethod, "value") else str(t.payment.paymentMethod)
+            
+            ps_str = None
+            if t.payment and t.payment.status:
+                ps_str = t.payment.status.value if hasattr(t.payment.status, "value") else str(t.payment.status)
+
             result.append(AdminTicketDTO(
                 id=t.id,
+                ticketId=t.id,
                 tripId=t.trip_id,
                 route=route_str,
+                routeName=route_str,
                 departureTime=t.trip.departureTime if t.trip else None,
+                busInfo=bus_str,
                 seatNumber=t.seat.seatNumber if t.seat else "",
                 passengerName=p.fullName if p else "",
                 passengerPhone=p.phone if p else "",
                 price=t.price,
-                status=t.status.value if t.status else "",
-                paymentMethod=t.payment.paymentMethod.value if t.payment and t.payment.paymentMethod else None,
-                paymentStatus=t.payment.status.value if t.payment and t.payment.status else None,
+                status=t.status.value if (t.status and hasattr(t.status, "value")) else str(t.status or ""),
+                paymentMethod=pm_str,
+                paymentStatus=ps_str,
                 bookedAt=t.bookedAt,
                 ticketCode=t_code,
                 pickupPoint=t.pickupPoint,

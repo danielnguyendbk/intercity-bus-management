@@ -183,9 +183,12 @@ class UpdateRouteRequest(BaseModel):
 # Admin Ticket
 class AdminTicketDTO(BaseModel):
     id: int
+    ticketId: Optional[int] = None
     tripId: Optional[int] = None
     route: Optional[str] = ""
+    routeName: Optional[str] = ""
     departureTime: Optional[datetime] = None
+    busInfo: Optional[str] = ""
     seatNumber: Optional[str] = ""
     passengerName: Optional[str] = ""
     passengerPhone: Optional[str] = ""

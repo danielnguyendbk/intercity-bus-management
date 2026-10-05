@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, Numeric, DateTime, ForeignKey, Enum as SQLEnum, UniqueConstraint
+from sqlalchemy import Column, BigInteger, String, Numeric, DateTime, ForeignKey, Enum as SQLEnum, UniqueConstraint, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -19,11 +19,15 @@ class PaymentMethod(str, enum.Enum):
     MOMO = "MOMO"
     BANK = "BANK"
     VNPAY = "VNPAY"
+    SEPAY = "SEPAY"
+    VIETQR = "VIETQR"
+    COD = "COD"
 
 class PaymentStatus(str, enum.Enum):
     PENDING = "PENDING"
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
+    REVIEW_REQUIRED = "REVIEW_REQUIRED"
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -51,9 +55,10 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    paymentCode = Column("payment_code", String(50), unique=True, nullable=True)
     ticket_id = Column(BigInteger, ForeignKey("tickets.id"), unique=True, nullable=True)
     amount = Column(Numeric(10, 2), nullable=False)
-    paymentMethod = Column("payment_method", SQLEnum(PaymentMethod), nullable=False)
+    paymentMethod = Column("payment_method", String(50), nullable=False)
     status = Column(SQLEnum(PaymentStatus), nullable=False, default=PaymentStatus.PENDING)
     transactionCode = Column("transaction_code", String(100), nullable=True)
     paidAt = Column("paid_at", DateTime, nullable=True)
@@ -64,5 +69,10 @@ class Payment(Base):
     vnpBankCode = Column("vnp_bank_code", String(20), nullable=True)
     vnpCardType = Column("vnp_card_type", String(20), nullable=True)
     vnpResponseCode = Column("vnp_response_code", String(10), nullable=True)
+
+    # SePay VietQR specific fields
+    sepayTransactionId = Column("sepay_transaction_id", String(100), unique=True, nullable=True)
+    rawPayload = Column("raw_payload", JSON, nullable=True)
+    notes = Column("notes", String(500), nullable=True)
 
     ticket = relationship("Ticket", back_populates="payment")
