@@ -213,7 +213,53 @@ export const LOCATION_DATA: CityData[] = [
 ];
 
 // Simple location list for backward compatibility (trips search)
-export const LOCATIONS = LOCATION_DATA.map((c) => c.city);
+export const LOCATIONS: string[] = LOCATION_DATA.map((c) => c.city);
 
-export const getCityData = (city: string): CityData | undefined =>
-  LOCATION_DATA.find((c) => c.city === city);
+export const normalizeCityName = (city: string): string => {
+  if (!city) return "";
+  const lower = city.toLowerCase();
+  if (
+    lower.includes("hà nội") ||
+    lower.includes("ha noi") ||
+    lower.includes("h├á") ||
+    lower.includes("nß╗öi") ||
+    lower.includes("n??a????i")
+  ) {
+    return "Hà Nội";
+  }
+  if (
+    lower.includes("tp.hcm") ||
+    lower.includes("hồ chí minh") ||
+    lower.includes("ho chi minh") ||
+    lower.includes("sài gòn") ||
+    lower.includes("sai gon") ||
+    lower.includes("hcm")
+  ) {
+    return "TP.HCM";
+  }
+  if (
+    lower.includes("đà nẵng") ||
+    lower.includes("da nang") ||
+    lower.includes("n??a??a??ng") ||
+    lower.includes("a????a????")
+  ) {
+    return "Đà Nẵng";
+  }
+  if (lower.includes("nha trang")) return "Nha Trang";
+  if (lower.includes("đà lạt") || lower.includes("da lat")) return "Đà Lạt";
+  if (lower.includes("cần thơ") || lower.includes("can tho")) return "Cần Thơ";
+  if (lower.includes("hải phòng") || lower.includes("hai phong")) return "Hải Phòng";
+  if (lower.includes("nghệ an") || lower.includes("nghe an") || lower.includes("vinh")) return "Nghệ An";
+  return city;
+};
+
+export const getCityData = (city: string): CityData | undefined => {
+  if (!city) return undefined;
+  const exact = LOCATION_DATA.find(
+    (c) => c.city.toLowerCase() === city.toLowerCase() || c.cityLabel.toLowerCase() === city.toLowerCase()
+  );
+  if (exact) return exact;
+
+  const normalized = normalizeCityName(city);
+  return LOCATION_DATA.find((c) => c.city === normalized);
+};

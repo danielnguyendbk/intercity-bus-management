@@ -51,6 +51,7 @@ import {
   LOCATION_DATA,
   LOCATIONS,
   getCityData,
+  normalizeCityName,
   PickupPoint,
 } from "../../utils/locations";
 
@@ -209,15 +210,28 @@ export default function CustomerBookingPage() {
     setSelectedSeat(null);
     setSeats([]);
 
-    // Auto-select origin & destination pickup points
-    const originData = getCityData(trip.origin);
-    const destData = getCityData(trip.destination);
+    // Auto-select origin & destination pickup points with clean normalization
+    const originCityClean = normalizeCityName(trip.origin);
+    const destCityClean = normalizeCityName(trip.destination);
+    const originData = getCityData(trip.origin) || getCityData(originCityClean);
+    const destData = getCityData(trip.destination) || getCityData(destCityClean);
+
+    const defaultOrigin: PickupPoint = originData?.pickupPoints[0] || {
+      id: "default-origin-1",
+      name: `Bến xe trung tâm ${originCityClean || "Hà Nội"}`,
+      address: `Khu vực sảnh đón khách xe liên tỉnh, ${originCityClean || "Hà Nội"}`,
+    };
+    const defaultDest: PickupPoint = destData?.pickupPoints[0] || {
+      id: "default-dest-1",
+      name: `Bến xe trung tâm ${destCityClean || "TP.HCM"}`,
+      address: `Khu vực sảnh trả khách xe liên tỉnh, ${destCityClean || "TP.HCM"}`,
+    };
 
     setPickupCity(trip.origin);
-    setPickupPoint(originData?.pickupPoints[0] || null);
+    setPickupPoint(defaultOrigin);
 
     setDropoffCity(trip.destination);
-    setDropoffPoint(destData?.pickupPoints[0] || null);
+    setDropoffPoint(defaultDest);
 
     setLoadingSeats(true);
     try {
@@ -239,14 +253,19 @@ export default function CustomerBookingPage() {
 
   const handleProceedToCheckout = () => {
     if (!selectedSeat) {
-      toast.error("Vui lòng chọn ghế ngồi");
+      toast.error("Vui lòng chọn ghế ngồi trên sơ đồ");
       return;
     }
-    if (!pickupPoint || !dropoffPoint) {
-      toast.error("Vui lòng chọn điểm đón và điểm trả");
+    const finalPickup = pickupPoint || originPoints[0];
+    const finalDropoff = dropoffPoint || destPoints[0];
+    if (!finalPickup || !finalDropoff) {
+      toast.error("Vui lòng xác nhận điểm đón và điểm trả");
       return;
     }
+    setPickupPoint(finalPickup);
+    setDropoffPoint(finalDropoff);
     setStep("checkout");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleConfirmBooking = async () => {
@@ -329,12 +348,47 @@ export default function CustomerBookingPage() {
 
   // Available pickup & dropoff points based on current cities
   const originPoints = useMemo(() => {
-    return (pickupCity ? getCityData(pickupCity)?.pickupPoints : undefined) || [];
-  }, [pickupCity]);
+    const list = (pickupCity ? getCityData(pickupCity)?.pickupPoints : undefined) || [];
+    if (list.length > 0) return list;
+    const cleanCity = normalizeCityName(selectedTrip?.origin || pickupCity || "Khởi hành");
+    const fallbackList = getCityData(cleanCity)?.pickupPoints;
+    if (fallbackList && fallbackList.length > 0) return fallbackList;
+    return [
+      {
+        id: "default-origin-1",
+        name: `Bến xe trung tâm ${cleanCity}`,
+        address: `Khu vực sảnh đón khách xe liên tỉnh, ${cleanCity}`,
+      },
+    ];
+  }, [pickupCity, selectedTrip?.origin]);
 
   const destPoints = useMemo(() => {
-    return (dropoffCity ? getCityData(dropoffCity)?.pickupPoints : undefined) || [];
-  }, [dropoffCity]);
+    const list = (dropoffCity ? getCityData(dropoffCity)?.pickupPoints : undefined) || [];
+    if (list.length > 0) return list;
+    const cleanCity = normalizeCityName(selectedTrip?.destination || dropoffCity || "Đến");
+    const fallbackList = getCityData(cleanCity)?.pickupPoints;
+    if (fallbackList && fallbackList.length > 0) return fallbackList;
+    return [
+      {
+        id: "default-dest-1",
+        name: `Bến xe trung tâm ${cleanCity}`,
+        address: `Khu vực sảnh trả khách xe liên tỉnh, ${cleanCity}`,
+      },
+    ];
+  }, [dropoffCity, selectedTrip?.destination]);
+
+  // Ensure pickupPoint and dropoffPoint always have a valid selected item
+  useEffect(() => {
+    if ((!pickupPoint || !originPoints.some((p) => p.name === pickupPoint.name)) && originPoints.length > 0) {
+      setPickupPoint(originPoints[0]);
+    }
+  }, [originPoints, pickupPoint]);
+
+  useEffect(() => {
+    if ((!dropoffPoint || !destPoints.some((p) => p.name === dropoffPoint.name)) && destPoints.length > 0) {
+      setDropoffPoint(destPoints[0]);
+    }
+  }, [destPoints, dropoffPoint]);
 
   return (
     <div className="space-y-6">
@@ -615,9 +669,9 @@ export default function CustomerBookingPage() {
             <div>
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Chuyến xe đang chọn</div>
               <div className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>{selectedTrip.origin}</span>
+                <span>{normalizeCityName(selectedTrip.origin)}</span>
                 <ArrowRight className="h-4 w-4 text-slate-400" />
-                <span>{selectedTrip.destination}</span>
+                <span>{normalizeCityName(selectedTrip.destination)}</span>
               </div>
               <div className="text-xs text-slate-500 mt-0.5">
                 Khởi hành: {fmtTime(selectedTrip.departureTime)} - {fmtDate(selectedTrip.departureTime)} · {selectedTrip.busLabel}
@@ -726,67 +780,59 @@ export default function CustomerBookingPage() {
                 {/* Pickup selection */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Điểm đón tại {selectedTrip.origin}
+                    Điểm đón tại {normalizeCityName(selectedTrip.origin)}
                   </label>
-                  {originPoints.length === 0 ? (
-                    <div className="text-xs text-slate-500 italic">Bến xe {selectedTrip.origin}</div>
-                  ) : (
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                      {originPoints.map((point) => {
-                        const isSelected = pickupPoint?.name === point.name;
-                        return (
-                          <div
-                            key={point.name}
-                            onClick={() => setPickupPoint(point)}
-                            className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${
-                              isSelected
-                                ? "border-[#0f2849] bg-slate-50 font-medium"
-                                : "border-slate-200 hover:bg-slate-50/60"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-slate-900">{point.name}</span>
-                              {isSelected && <span className="text-xs text-[#0f2849] font-bold">✓</span>}
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">{point.address}</p>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {originPoints.map((point) => {
+                      const isSelected = pickupPoint?.name === point.name;
+                      return (
+                        <div
+                          key={point.name}
+                          onClick={() => setPickupPoint(point)}
+                          className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${
+                            isSelected
+                              ? "border-[#0f2849] bg-slate-50 font-medium ring-1 ring-[#0f2849]/20"
+                              : "border-slate-200 hover:bg-slate-50/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-900">{point.name}</span>
+                            {isSelected && <span className="text-xs text-[#0f2849] font-bold">✓</span>}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          <p className="text-[11px] text-slate-500 mt-0.5">{point.address}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Dropoff selection */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Điểm trả tại {selectedTrip.destination}
+                    Điểm trả tại {normalizeCityName(selectedTrip.destination)}
                   </label>
-                  {destPoints.length === 0 ? (
-                    <div className="text-xs text-slate-500 italic">Bến xe {selectedTrip.destination}</div>
-                  ) : (
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                      {destPoints.map((point) => {
-                        const isSelected = dropoffPoint?.name === point.name;
-                        return (
-                          <div
-                            key={point.name}
-                            onClick={() => setDropoffPoint(point)}
-                            className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${
-                              isSelected
-                                ? "border-[#0f2849] bg-slate-50 font-medium"
-                                : "border-slate-200 hover:bg-slate-50/60"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-slate-900">{point.name}</span>
-                              {isSelected && <span className="text-xs text-[#0f2849] font-bold">✓</span>}
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">{point.address}</p>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                    {destPoints.map((point) => {
+                      const isSelected = dropoffPoint?.name === point.name;
+                      return (
+                        <div
+                          key={point.name}
+                          onClick={() => setDropoffPoint(point)}
+                          className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${
+                            isSelected
+                              ? "border-[#0f2849] bg-slate-50 font-medium ring-1 ring-[#0f2849]/20"
+                              : "border-slate-200 hover:bg-slate-50/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-900">{point.name}</span>
+                            {isSelected && <span className="text-xs text-[#0f2849] font-bold">✓</span>}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          <p className="text-[11px] text-slate-500 mt-0.5">{point.address}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Selected seat & Fare summary */}
@@ -813,10 +859,10 @@ export default function CustomerBookingPage() {
                 <button
                   type="button"
                   onClick={handleProceedToCheckout}
-                  disabled={!selectedSeat || !pickupPoint || !dropoffPoint}
+                  disabled={!selectedSeat}
                   className="w-full rounded-lg bg-[#0f2849] hover:bg-[#1a3a6b] py-3 text-sm font-semibold text-white shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Tiếp tục nhập thông tin & thanh toán →
+                  {selectedSeat ? "Tiếp tục nhập thông tin & thanh toán →" : "Vui lòng chọn 1 ghế trên sơ đồ"}
                 </button>
               </div>
             </div>
