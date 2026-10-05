@@ -42,6 +42,7 @@ import {
   getAdminRevenueStats,
 } from "../../api/admin";
 import { extractApiErrorMessage } from "../../utils/apiError";
+import { formatMoney, formatPriceNumber } from "../../utils/format";
 
 type PeriodKey = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -56,25 +57,16 @@ const PERIODS: Array<{
   { key: "yearly", label: "Theo năm (5 năm)", icon: <BarChart3 className="h-4 w-4" /> },
 ];
 
-const formatVND = (value: number): string => {
-  if (value === null || value === undefined || Number.isNaN(value)) return "0 ₫";
-  if (value >= 1_000_000_000) return (value / 1_000_000_000).toFixed(2) + " tỷ ₫";
-  if (value >= 1_000_000) return (value / 1_000_000).toFixed(2) + " triệu ₫";
-  if (value >= 1_000) return (value / 1_000).toFixed(1) + " nghìn ₫";
-  return value.toLocaleString("vi-VN") + " ₫";
+const formatVND = (value: number | string): string => {
+  return formatMoney(value, true, "₫");
 };
 
-const formatVNDShort = (value: number): string => {
-  if (!value) return "0";
-  if (value >= 1_000_000_000) return (value / 1_000_000_000).toFixed(1) + "tỷ";
-  if (value >= 1_000_000) return (value / 1_000_000).toFixed(1) + "tr";
-  if (value >= 1_000) return (value / 1_000).toFixed(0) + "k";
-  return String(value);
+const formatVNDShort = (value: number | string): string => {
+  return formatPriceNumber(value);
 };
 
-const formatVNDLong = (value: number): string => {
-  if (value === null || value === undefined || Number.isNaN(value)) return "0 ₫";
-  return value.toLocaleString("vi-VN") + " ₫";
+const formatVNDLong = (value: number | string): string => {
+  return formatMoney(value, true, "₫");
 };
 
 interface ChartPoint {

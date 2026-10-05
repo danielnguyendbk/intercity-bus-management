@@ -14,6 +14,7 @@ import {
 } from "../../api/admin";
 import type { AdminTicketDetail } from "../../api/admin";
 import { extractApiErrorMessage } from "../../utils/apiError";
+import { formatPrice } from "../../utils/format";
 
 interface Props {
   tripId: number;
@@ -22,7 +23,7 @@ interface Props {
   onChanged?: () => void; // reload trips list nếu có
 }
 
-const fmtPrice = (n: number) => n.toLocaleString("vi-VN") + " đ";
+const fmtPrice = (n: number | string | null | undefined) => formatPrice(n);
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   BOOKED:    { label: "Đã đặt",         color: "text-blue-700",     bg: "bg-blue-100"     },

@@ -54,6 +54,7 @@ import {
   normalizeCityName,
   PickupPoint,
 } from "../../utils/locations";
+import { formatPrice } from "../../utils/format";
 
 type Step = "search" | "seats" | "checkout" | "success";
 type PaymentMethod = "SEPAY" | "COD" | "VNPAY";
@@ -79,8 +80,7 @@ const fmtDate = (dt: string) =>
     year: "numeric",
   });
 
-const fmtPrice = (p: number) =>
-  p.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+const fmtPrice = (p: number | string | null | undefined) => formatPrice(p);
 
 export default function CustomerBookingPage() {
   const { user } = useAuthStore();

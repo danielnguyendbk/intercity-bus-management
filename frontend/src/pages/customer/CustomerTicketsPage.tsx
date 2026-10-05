@@ -17,6 +17,7 @@ import { getMyTickets, cancelTicket, TicketRecord } from "../../api/customer";
 import { getMyFeedbacks } from "../../api/feedback";
 import FeedbackModal from "../../components/feedback/FeedbackModal";
 import Pagination from "../../components/ui/Pagination";
+import { formatPrice } from "../../utils/format";
 
 const QR_CODE_INFO = {
   bankId: "VCB",
@@ -72,8 +73,7 @@ const fmtTime = (dt: string | null | undefined) => {
   });
 };
 
-const fmtPrice = (p: number) =>
-  p.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+const fmtPrice = (p: number | string | null | undefined) => formatPrice(p);
 
 // ─── QR Payment Modal (VietQR) ───────────────────────────────────────
 function QRCodePaymentModal({ 

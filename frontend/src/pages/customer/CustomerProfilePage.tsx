@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { User, Phone, Mail, UserCheck, Clock, CheckCircle2 } from "lucide-react";
 import { getProfile, updateProfile, getMyTickets, TicketRecord } from "../../api/customer";
 import { useAuthStore } from "../../stores/authStore";
+import { formatPrice } from "../../utils/format";
 
 const fmtDateTime = (dt: string) =>
   new Date(dt).toLocaleString("vi-VN", {
@@ -18,8 +19,7 @@ const fmtDateTime = (dt: string) =>
     minute: "2-digit",
   });
 
-const fmtPrice = (p: number) =>
-  p.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+const fmtPrice = (p: number | string | null | undefined) => formatPrice(p);
 
 export default function CustomerProfilePage() {
   const { setUser, user } = useAuthStore();

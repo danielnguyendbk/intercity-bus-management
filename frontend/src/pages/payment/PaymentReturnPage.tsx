@@ -277,9 +277,11 @@ function InfoRow({
   );
 }
 
-function formatPrice(amount: number | undefined | null): string {
-  if (amount == null || isNaN(amount)) return "—";
-  return amount.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+import { formatMoney } from "../../utils/format";
+
+function formatPrice(amount: number | string | undefined | null): string {
+  if (amount == null || amount === "") return "—";
+  return formatMoney(amount, true, "đ");
 }
 
 /** Parse chuỗi ngày VNPay (yyyyMMddHHmmss) sang Date */
