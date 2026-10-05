@@ -469,7 +469,7 @@ export default function FeedbackInboxModal({
                       className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {(Object.keys(FEEDBACK_STATUS_LABELS) as FeedbackStatus[]).map((s) => (
-                        <option key={s} value={s} className="text-slate-900">
+                        <option key={s} value={s} className="bg-slate-800 text-white">
                           {FEEDBACK_STATUS_LABELS[s]}
                         </option>
                       ))}
@@ -480,7 +480,7 @@ export default function FeedbackInboxModal({
                       className="text-xs bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {(Object.keys(FEEDBACK_PRIORITY_LABELS) as FeedbackPriority[]).map((p) => (
-                        <option key={p} value={p} className="text-slate-900">
+                        <option key={p} value={p} className="bg-slate-800 text-white">
                           Ưu tiên: {FEEDBACK_PRIORITY_LABELS[p]}
                         </option>
                       ))}

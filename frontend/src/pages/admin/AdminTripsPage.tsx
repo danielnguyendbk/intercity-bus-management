@@ -769,7 +769,7 @@ function TripModal({
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {routes.map((route) => (
-                  <option key={route.id} value={route.id} className="text-slate-900">
+                  <option key={route.id} value={route.id} className="bg-slate-800 text-white">
                     {route.origin} → {route.destination}
                   </option>
                 ))}
@@ -792,9 +792,9 @@ function TripModal({
                       onChange={(e) => setForm({ ...form, origin: e.target.value })}
                       className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     >
-                      <option value="" className="text-slate-900">-- Chọn điểm đi --</option>
+                      <option value="" className="bg-slate-800 text-white">-- Chọn điểm đi --</option>
                       {LOCATIONS.filter(l => l !== form.destination).map((l) => (
-                        <option key={l} value={l} className="text-slate-900">{l}</option>
+                        <option key={l} value={l} className="bg-slate-800 text-white">{l}</option>
                       ))}
                     </select>
                   </div>
@@ -810,9 +810,9 @@ function TripModal({
                       onChange={(e) => setForm({ ...form, destination: e.target.value })}
                       className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
-                      <option value="" className="text-slate-900">-- Chọn điểm đến --</option>
+                      <option value="" className="bg-slate-800 text-white">-- Chọn điểm đến --</option>
                       {LOCATIONS.filter(l => l !== form.origin).map((l) => (
-                        <option key={l} value={l} className="text-slate-900">{l}</option>
+                        <option key={l} value={l} className="bg-slate-800 text-white">{l}</option>
                       ))}
                     </select>
                   </div>
@@ -867,9 +867,9 @@ function TripModal({
                   onChange={(e) => setForm({ ...form, busId: Number(e.target.value) })}
                   className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 >
-                  <option value="" className="text-slate-900">-- Chọn xe --</option>
+                  <option value="" className="bg-slate-800 text-white">-- Chọn xe --</option>
                   {buses.map((bus) => (
-                    <option key={bus.id} value={bus.id} className="text-slate-900">
+                    <option key={bus.id} value={bus.id} className="bg-slate-800 text-white">
                       {bus.licensePlate} - {bus.busType}
                     </option>
                   ))}
@@ -883,11 +883,11 @@ function TripModal({
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="SCHEDULED" className="text-slate-900">Đã lên lịch</option>
-                <option value="RUNNING" className="text-slate-900">Đang chạy</option>
-                <option value="COMPLETED" className="text-slate-900">Hoàn thành</option>
-                <option value="CANCELLED" className="text-slate-900">Đã hủy</option>
-                <option value="DELAYED" className="text-slate-900">Trễ</option>
+                <option value="SCHEDULED" className="bg-slate-800 text-white">Đã lên lịch</option>
+                <option value="RUNNING" className="bg-slate-800 text-white">Đang chạy</option>
+                <option value="COMPLETED" className="bg-slate-800 text-white">Hoàn thành</option>
+                <option value="CANCELLED" className="bg-slate-800 text-white">Đã hủy</option>
+                <option value="DELAYED" className="bg-slate-800 text-white">Trễ</option>
               </select>
             </div>
           </div>
@@ -932,9 +932,9 @@ function TripModal({
                   onChange={(e) => setForm({ ...form, driverId: e.target.value ? Number(e.target.value) : "" })}
                   className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="" className="text-slate-900">-- Bỏ trống --</option>
+                  <option value="" className="bg-slate-800 text-white">-- Bỏ trống --</option>
                   {drivers.map((d) => (
-                    <option key={d.id} value={d.id} className="text-slate-900">{d.fullName} ({d.phone})</option>
+                    <option key={d.id} value={d.id} className="bg-slate-800 text-white">{d.fullName} ({d.phone})</option>
                   ))}
                 </select>
               </div>
@@ -945,9 +945,9 @@ function TripModal({
                   onChange={(e) => setForm({ ...form, assistantId: e.target.value ? Number(e.target.value) : "" })}
                   className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="" className="text-slate-900">-- Bỏ trống --</option>
+                  <option value="" className="bg-slate-800 text-white">-- Bỏ trống --</option>
                   {assistants.map((a) => (
-                    <option key={a.id} value={a.id} className="text-slate-900">{a.fullName} ({a.phone})</option>
+                    <option key={a.id} value={a.id} className="bg-slate-800 text-white">{a.fullName} ({a.phone})</option>
                   ))}
                 </select>
               </div>

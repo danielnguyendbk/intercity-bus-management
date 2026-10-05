@@ -87,6 +87,12 @@ button:disabled {
   font-size: 0.875rem;
 }
 
+.admin-theme option,
+select option {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
 .admin-theme input:focus,
 .admin-theme select:focus,
 .admin-theme textarea:focus {
