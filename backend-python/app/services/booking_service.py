@@ -12,10 +12,9 @@ from app.models.user import User, Passenger
 from app.models.operations import TripAssignment, Employee
 from app.schemas.trips_tickets import (
     TripSearchResponse, TripResponse, TripCreateRequest, SeatStatusResponse,
-    BookTicketRequest, TicketResponse, PayTicketRequest, VnpayPaymentResponse
+    BookTicketRequest, TicketResponse
 )
 from app.services.sse_service import broker
-from app.services.vnpay_util import build_payment_url, verify_secure_hash, format_vnp_datetime
 from app.core.config import settings
 
 class BookingService:
@@ -162,10 +161,13 @@ class BookingService:
         ).with_for_update().first()
 
         if existing_ticket:
-            if existing_ticket.status not in [TicketStatus.CANCELLED, TicketStatus.REFUNDED, TicketStatus.HOLD]:
+            if existing_ticket.status not in [TicketStatus.CANCELLED, TicketStatus.REFUNDED]:
                 raise HTTPException(status_code=400, detail="Ghế này đã được đặt cho chuyến này")
             ticket = existing_ticket
-            ticket.price = request.price
+            if ticket.payment:
+                raise HTTPException(status_code=409, detail="Vé này có lịch sử thanh toán; vui lòng chọn ghế khác hoặc liên hệ nhân viên.")
+            ticket.booked_by = current_user.id
+            ticket.price = trip.route.basePrice
             ticket.status = TicketStatus.HOLD
             ticket.bookedAt = datetime.now()
             ticket.paidAt = None
@@ -173,7 +175,7 @@ class BookingService:
             ticket = Ticket(
                 trip_id=trip.id,
                 seat_id=seat.id,
-                price=request.price,
+                price=trip.route.basePrice,
                 status=TicketStatus.HOLD,
                 booked_by=current_user.id,
                 bookedAt=datetime.now()
@@ -232,7 +234,7 @@ class BookingService:
 
     @staticmethod
     def cancel_ticket(ticket_id: int, current_user: User, db: Session) -> TicketResponse:
-        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).with_for_update().first()
         if not ticket:
             raise HTTPException(status_code=404, detail="Ticket not found")
 
@@ -247,35 +249,9 @@ class BookingService:
         if ticket.trip and ticket.trip.departureTime and datetime.now() > ticket.trip.departureTime:
             raise HTTPException(status_code=400, detail="Không thể hủy vé vì chuyến xe đã khởi hành")
 
+        if ticket.payment and ticket.payment.status == PaymentStatus.PENDING:
+            ticket.payment.status = PaymentStatus.FAILED
         ticket.status = TicketStatus.CANCELLED
-        db.commit()
-        db.refresh(ticket)
-        return BookingService._to_ticket_response(ticket)
-
-    @staticmethod
-    def pay_ticket_offline(ticket_id: int, request: PayTicketRequest, current_user: User, db: Session) -> TicketResponse:
-        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
-        if not ticket:
-            raise HTTPException(status_code=404, detail="Ticket not found")
-
-        if not ticket.passenger or ticket.passenger.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="Bạn không có quyền thanh toán vé này")
-
-        if ticket.status != TicketStatus.HOLD:
-            raise HTTPException(status_code=400, detail="Chỉ vé đang chờ thanh toán (HOLD) mới có thể thanh toán")
-
-        payment = Payment(
-            ticket_id=ticket.id,
-            amount=ticket.price,
-            paymentMethod=request.paymentMethod,
-            status=PaymentStatus.SUCCESS,
-            transactionCode=f"{request.paymentMethod.value}-{int(datetime.now().timestamp() * 1000)}",
-            paidAt=datetime.now()
-        )
-        db.add(payment)
-
-        ticket.status = TicketStatus.PAID
-        ticket.paidAt = datetime.now()
         db.commit()
         db.refresh(ticket)
         return BookingService._to_ticket_response(ticket)
@@ -290,6 +266,8 @@ class BookingService:
 
         bus_label = f"{bus.licensePlate} - {bus.busType.value}" if bus and bus.busType else (bus.licensePlate if bus else "")
         ticket_code = f"BUS-{ticket.bookedAt.strftime('%Y%m%d') if ticket.bookedAt else datetime.now().strftime('%Y%m%d')}-{ticket.id:05d}"
+
+        payment_info = (payment.rawPayload or {}).get("checkout", {}) if payment else {}
 
         return TicketResponse(
             id=ticket.id,
@@ -319,6 +297,11 @@ class BookingService:
             transactionCode=payment.transactionCode if payment else None,
             transactionTime=payment.paidAt if payment else None,
             ticketCode=ticket_code,
+            paymentCode=payment.paymentCode if payment else None,
+            qrUrl=payment_info.get("qrUrl") if payment and payment.status == PaymentStatus.PENDING and ticket.status in (TicketStatus.HOLD, TicketStatus.BOOKED) else None,
+            bankName=payment_info.get("bankName"),
+            accountNumber=payment_info.get("accountNumber"),
+            accountName=payment_info.get("accountName"),
             pickupPoint=ticket.pickupPoint,
             dropoffPoint=ticket.dropoffPoint
         )

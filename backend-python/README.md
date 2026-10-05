@@ -44,7 +44,7 @@ Thư mục `backend-python/` chứa toàn bộ Backend đã được chuyển đ
 File `.env` bao gồm:
 - **Database:** Kết nối MySQL `bus_management_db` (Port 3306).
 - **JWT:** Thuật toán `HS256`, thời hạn token 3600000ms.
-- **VNPay Sandbox:** TMN_CODE, HASH_SECRET và các URL callback (vnp_ReturnUrl, vnp_IpnUrl).
+- **SePay:** `SEPAY_API_KEY`, `SEPAY_BANK_CODE`, `SEPAY_ACCOUNT_NUMBER`, `SEPAY_ACCOUNT_NAME`, `SEPAY_WEBHOOK_TOKEN`. Xem [SEPAY.md](SEPAY.md).
 
 ---
 

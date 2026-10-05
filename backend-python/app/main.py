@@ -5,7 +5,7 @@ from app.routers import auth, trips_tickets, admin, routes, operations, health
 
 app = FastAPI(
     title="Xe Khach Management API (Python FastAPI)",
-    description="Hệ thống Backend quản lý xe khách, bán vé trực tuyến và cổng thanh toán VNPay chuyển đổi từ Spring Boot sang Python FastAPI",
+    description="Hệ thống Backend quản lý xe khách, bán vé trực tuyến và thanh toán SePay chuyển đổi từ Spring Boot sang Python FastAPI",
     version="1.0.0"
 )
 

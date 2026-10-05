@@ -99,7 +99,7 @@ export default function LoginPage() {
               </div>
               <div className="login-feature-item">
                 <ShieldCheck className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                <span>Đặt vé trực tuyến, thanh toán VNPAY an toàn</span>
+                <span>Đặt vé trực tuyến, thanh toán SePay an toàn</span>
               </div>
             </div>
 

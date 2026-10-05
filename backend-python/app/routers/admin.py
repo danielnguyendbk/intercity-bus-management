@@ -298,9 +298,11 @@ def _set_ticket_status(ticket_id: int, ticket_status: TicketStatus, db: Session)
 
 @router.put("/tickets/{ticket_id}/mark-paid")
 def mark_ticket_paid(ticket_id: int, db: Session = Depends(get_db)):
-    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+    ticket = db.query(Ticket).filter(Ticket.id == ticket_id).with_for_update().first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    if ticket.payment and ticket.payment.paymentMethod == "SEPAY":
+        raise HTTPException(status_code=409, detail="Vé SePay chỉ được cập nhật thanh toán từ giao dịch SePay đã xác minh, không xác nhận thủ công.")
     ticket.status = TicketStatus.PAID
     ticket.paidAt = datetime.now()
     if not ticket.payment:

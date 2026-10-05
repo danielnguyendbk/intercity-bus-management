@@ -33,7 +33,8 @@ async def event_generator(request: Request):
             try:
                 # Wait for event with timeout to send keep-alive comment
                 msg = await asyncio.wait_for(q.get(), timeout=15.0)
-                yield f"data: {msg}\n\n"
+                envelope = json.loads(msg)
+                yield f"event: {envelope['event']}\ndata: {json.dumps(envelope['data'])}\n\n"
             except asyncio.TimeoutError:
                 yield ": keep-alive\n\n"
     finally:

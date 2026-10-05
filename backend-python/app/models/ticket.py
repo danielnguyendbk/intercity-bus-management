@@ -18,7 +18,6 @@ class PaymentMethod(str, enum.Enum):
     CARD = "CARD"
     MOMO = "MOMO"
     BANK = "BANK"
-    VNPAY = "VNPAY"
     SEPAY = "SEPAY"
     VIETQR = "VIETQR"
     COD = "COD"
@@ -63,7 +62,7 @@ class Payment(Base):
     transactionCode = Column("transaction_code", String(100), nullable=True)
     paidAt = Column("paid_at", DateTime, nullable=True)
 
-    # VNPay specific fields
+    # Historical gateway columns: retained to preserve existing payment records.
     vnpTxnRef = Column("vnp_txn_ref", String(100), nullable=True)
     vnpTransactionNo = Column("vnp_transaction_no", String(50), nullable=True)
     vnpBankCode = Column("vnp_bank_code", String(20), nullable=True)

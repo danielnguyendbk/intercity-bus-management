@@ -1,8 +1,12 @@
-# E2E Test script cho SePay VietQR (Chạy trên Windows PowerShell)
-Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "   KIỂM THỬ TÍCH HỢP SEPAY VIETQR PAYMENT (E2E)  " -ForegroundColor Cyan
-Write-Host "=================================================" -ForegroundColor Cyan
-
-cd backend-python
-.\venv\Scripts\python.exe test_sepay_e2e.py
-cd ..
+# Local regression tests only: mocked provider, in-memory database, no money transfer.
+$ErrorActionPreference = "Stop"
+$backendPath = Join-Path $PSScriptRoot "backend-python"
+Push-Location -LiteralPath $backendPath
+try {
+    Write-Host "SePay local regression tests (not live E2E)" -ForegroundColor Cyan
+    & .\venv\Scripts\python.exe -m unittest discover -s tests -v
+    $testExitCode = $LASTEXITCODE
+} finally {
+    Pop-Location
+}
+exit $testExitCode

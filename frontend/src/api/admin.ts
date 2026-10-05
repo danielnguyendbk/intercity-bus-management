@@ -410,7 +410,7 @@ export interface AdminTripTicket {
   bookedAt: string | null;
   pickupPoint: string | null;
   dropoffPoint: string | null;
-  paymentMethod: string | null; // CASH / VNPAY / null
+  paymentMethod: string | null; // CASH / SEPAY / null
   paymentStatus: string | null; // PENDING / SUCCESS / FAILED / null
   paidAt: string | null;
 }
@@ -537,7 +537,7 @@ export async function getAdminRevenueStats(): Promise<AdminRevenueStats> {
 /** Mở kết nối SSE tới admin notifications. */
 export function connectAdminNotifications(
   onBookingCreated: (data: AdminBookingEvent) => void,
-  onPaymentVnpay: (data: AdminPaymentEvent) => void,
+  onPaymentSepay: (data: AdminPaymentEvent) => void,
   onFeedbackCreated?: (data: AdminFeedbackEvent) => void,
   onError?: (err: Event) => void,
 ): EventSource {
@@ -559,9 +559,9 @@ export function connectAdminNotifications(
     }
   });
 
-  es.addEventListener("payment.vnpay.success", (e) => {
+  es.addEventListener("payment.sepay.success", (e) => {
     try {
-      onPaymentVnpay(JSON.parse((e as MessageEvent).data));
+      onPaymentSepay(JSON.parse((e as MessageEvent).data));
     } catch {
       // Bỏ qua event lỗi parse
     }
@@ -602,10 +602,8 @@ export interface AdminPaymentEvent {
   passengerName: string;
   passengerPhone: string;
   amount: number;
-  vnpTxnRef: string;
-  vnpTransactionNo: string | null;
-  vnpBankCode: string | null;
-  vnpCardType: string | null;
+  paymentCode: string;
+  transactionId: string;
   paidAt: string;
   pickupPoint: string | null;
   dropoffPoint: string | null;

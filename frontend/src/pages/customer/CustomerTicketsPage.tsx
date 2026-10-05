@@ -11,24 +11,14 @@
 import React, { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { MessageCircle, X, Ticket, ArrowRight, Printer, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { MessageCircle, X, Ticket, ArrowRight, ArrowLeft, Printer, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { getMyTickets, cancelTicket, TicketRecord } from "../../api/customer";
 import { getMyFeedbacks } from "../../api/feedback";
 import FeedbackModal from "../../components/feedback/FeedbackModal";
 import Pagination from "../../components/ui/Pagination";
+import SePayCheckout from "../../components/customer/SePayCheckout";
 import { formatPrice } from "../../utils/format";
-
-const QR_CODE_INFO = {
-  bankId: "VCB",
-  accountNo: "0987654321",
-  accountName: "LE VU HAO",
-};
-
-const generateVietQRUrl = (amount: number, ticketCode: string) => {
-  const transferContent = `THANH TOAN VE ${ticketCode}`;
-  return `https://img.vietqr.io/image/${QR_CODE_INFO.bankId}-${QR_CODE_INFO.accountNo}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(QR_CODE_INFO.accountName)}`;
-};
 
 // ─── Status & payment config ──────────────────────────────────────────
 const STATUS_MAP: Record<string, { label: string; style: string; dot: string }> = {
@@ -76,55 +66,19 @@ const fmtTime = (dt: string | null | undefined) => {
 const fmtPrice = (p: number | string | null | undefined) => formatPrice(p);
 
 // ─── QR Payment Modal (VietQR) ───────────────────────────────────────
-function QRCodePaymentModal({ 
-  ticket, 
-  onClose, 
-  onConfirm, 
-}: { 
-  ticket: TicketRecord; 
-  onClose: () => void; 
-  onConfirm: () => void; 
+function QRCodePaymentModal({ ticket, onClose, onConfirm }: {
+  ticket: TicketRecord;
+  onClose: () => void;
+  onConfirm: () => void;
 }) {
-  const qrUrl = generateVietQRUrl(ticket.price, ticket.ticketCode);
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden text-center border border-slate-200">
-        <div className="bg-[#0f2849] px-6 py-4 flex justify-between items-center text-white">
-          <h2 className="text-base font-bold text-amber-400">Thanh toán chuyển khoản</h2>
-          <button onClick={onClose} className="hover:bg-white/10 p-1.5 rounded-lg transition" aria-label="Đóng">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-6">
-          <div className="mb-1 text-slate-500 text-xs uppercase font-medium">Tổng tiền thanh toán</div>
-          <div className="text-2xl font-bold text-[#0f2849] mb-4">{fmtPrice(ticket.price)}</div>
-          
-          <div className="flex justify-center mb-4">
-            <div className="p-3 border border-slate-200 rounded-xl bg-white shadow-sm inline-block">
-              <img src={qrUrl} alt="VietQR" className="w-52 h-52 object-contain" />
-            </div>
-          </div>
-          
-          <p className="text-xs text-slate-500 mb-3 px-2">
-            Mở ứng dụng ngân hàng và quét mã VietQR để chuyển khoản tự động.
-          </p>
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 text-left">
-            <p className="font-semibold mb-0.5">Lưu ý:</p>
-            <p>Sau khi chuyển khoản, bấm nút xác nhận bên dưới để hệ thống cập nhật.</p>
-          </div>
-          
-          <button
-            onClick={onConfirm}
-            className="w-full flex justify-center items-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm"
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Đã hoàn tất chuyển khoản
-          </button>
-        </div>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label="Thanh toán SePay" className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-4">
+        <button type="button" onClick={onClose} className="mb-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+          <ArrowLeft size={16} aria-hidden="true" /> Trở lại chi tiết vé
+        </button>
+        <SePayCheckout ticketId={ticket.id} onPaid={onConfirm} />
+        <p className="mt-3 text-xs text-slate-600">Trở lại không hủy giao dịch. Nếu đã chuyển tiền, vui lòng không chuyển lại.</p>
       </div>
     </div>
   );
@@ -189,6 +143,9 @@ function InvoiceModal({
 
         {/* Invoice Body */}
         <div className="p-6 space-y-5">
+          <button type="button" onClick={onClose} disabled={isCancelling} className="print:hidden inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-50">
+            <ArrowLeft size={16} aria-hidden="true" /> Trở lại danh sách vé
+          </button>
           {/* Route info */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Tuyến đường</div>
@@ -432,9 +389,11 @@ export default function CustomerTicketsPage() {
     }
   };
 
-  const handleConfirmTransfer = async (_ticket: TicketRecord) => {
+  const handleConfirmTransfer = () => {
     setQrTicket(null);
-    toast.success("Đã ghi nhận! Nhân viên sẽ xác minh và xác nhận thanh toán trong thời gian sớm nhất.");
+    setSelectedTicket(null);
+    load();
+    toast.success("SePay đã xác nhận thanh toán thành công.");
   };
 
   const ticketHasFeedback = (t: TicketRecord) => feedbackTripIds.has(t.tripId);
@@ -465,6 +424,9 @@ export default function CustomerTicketsPage() {
   return (
     <>
       <div className="space-y-5">
+        <Link to="/customer/booking" className="print:hidden inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+          <ArrowLeft size={16} aria-hidden="true" /> Trở lại tìm chuyến
+        </Link>
         {/* Header & Filter Tabs */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm print:hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
@@ -590,7 +552,7 @@ export default function CustomerTicketsPage() {
         <QRCodePaymentModal
           ticket={qrTicket}
           onClose={() => setQrTicket(null)}
-          onConfirm={() => handleConfirmTransfer(qrTicket)}
+          onConfirm={handleConfirmTransfer}
         />
       )}
 

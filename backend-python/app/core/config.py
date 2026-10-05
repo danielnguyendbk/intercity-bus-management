@@ -1,9 +1,10 @@
 import os
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(Path(__file__).resolve().parents[2] / '.env', override=True)
 
 class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", 8080))
@@ -34,18 +35,11 @@ class Settings(BaseSettings):
     def cors_origins(self) -> List[str]:
         return [origin.strip() for origin in self.APP_CORS_ALLOWED_ORIGINS.split(",") if origin.strip()]
 
-    # VNPay
-    VNPAY_TMN_CODE: str = os.getenv("VNPAY_TMN_CODE", "SY273SZH")
-    VNPAY_HASH_SECRET: str = os.getenv("VNPAY_HASH_SECRET", "SFP53JL1Z5AS4O5WFIEBMEARJAEMDTBT")
-    VNPAY_URL: str = os.getenv("VNPAY_URL", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
-    VNPAY_RETURN_URL: str = os.getenv("VNPAY_RETURN_URL", "https://shrunk-down-accuracy.ngrok-free.dev/payment/vnpay-return")
-    VNPAY_API_URL: str = os.getenv("VNPAY_API_URL", "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction")
-    VNPAY_IPN_URL: str = os.getenv("VNPAY_IPN_URL", "https://shrunk-down-accuracy.ngrok-free.dev/api/public/payment/vnpay/ipn")
-    VNPAY_VERSION: str = "2.1.0"
-    VNPAY_COMMAND: str = "pay"
-    VNPAY_ORDER_TYPE: str = "other"
-    VNPAY_LOCALE: str = "vn"
-    VNPAY_CURRENCY_CODE: str = "VND"
-    VNPAY_EXPIRE_MINUTES: int = 15
+    # SePay credentials remain server-side.
+    SEPAY_API_KEY: str = os.getenv("SEPAY_API_KEY", "")
+    SEPAY_BANK_CODE: str = os.getenv("SEPAY_BANK_CODE", "")
+    SEPAY_ACCOUNT_NUMBER: str = os.getenv("SEPAY_ACCOUNT_NUMBER", "")
+    SEPAY_ACCOUNT_NAME: str = os.getenv("SEPAY_ACCOUNT_NAME", "")
+    SEPAY_WEBHOOK_TOKEN: str = os.getenv("SEPAY_WEBHOOK_TOKEN", "")
 
 settings = Settings()

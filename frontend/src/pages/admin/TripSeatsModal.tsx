@@ -215,7 +215,7 @@ export default function TripSeatsModal({ tripId, tripLabel, onClose, onChanged }
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {[...detail.tickets]
                     .sort((a, b) => {
-                      // Online (VNPay/CARD/MOMO/BANK) lên đầu, COD/unpaid xuống dưới
+                      // Online (SEPAY/CARD/MOMO/BANK) lên đầu, COD/unpaid xuống dưới
                       const aOnline = isOnlinePayment(a.paymentMethod) ? 0 : 1;
                       const bOnline = isOnlinePayment(b.paymentMethod) ? 0 : 1;
                       if (aOnline !== bOnline) return aOnline - bOnline;
@@ -405,19 +405,19 @@ function SeatInfoPanel({
 
       {/* Thanh toán */}
       <div className={`space-y-2 text-xs pt-2 border-t rounded-lg p-2 ${
-        t.payment?.paymentMethod === "VNPAY"
+        t.payment?.paymentMethod === "SEPAY"
           ? "border-blue-300 bg-gradient-to-br from-blue-50 to-indigo-50 ring-1 ring-blue-200"
           : "border-slate-200"
       }`}>
         <div className="flex items-center justify-between">
           <span className="text-slate-500 flex items-center gap-1">
-            {t.payment?.paymentMethod === "VNPAY"
+            {t.payment?.paymentMethod === "SEPAY"
               ? <CreditCard className="w-3.5 h-3.5 text-blue-600" />
               : <Wallet className="w-3.5 h-3.5 text-slate-500" />}
             Phương thức
           </span>
           <span className={`font-semibold flex items-center gap-1 ${
-            t.payment?.paymentMethod === "VNPAY"
+            t.payment?.paymentMethod === "SEPAY"
               ? "text-blue-700"
               : "text-slate-800"
           }`}>
@@ -425,7 +425,7 @@ function SeatInfoPanel({
               ? (
                 <>
                   {PAYMENT_LABELS[t.payment.paymentMethod]?.label ?? t.payment.paymentMethod}
-                  {t.payment.paymentMethod === "VNPAY" && (
+                  {t.payment.paymentMethod === "SEPAY" && (
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm ml-1">
                       Online
                     </span>

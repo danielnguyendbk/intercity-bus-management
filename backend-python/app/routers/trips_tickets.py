@@ -7,10 +7,11 @@ from app.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.trips_tickets import (
     TripSearchResponse, SeatStatusResponse, BookTicketRequest,
-    TicketResponse, PayTicketRequest, VnpayCreatePaymentRequest, VnpayPaymentResponse
+    TicketResponse, SePayCreatePaymentRequest
 )
 from app.services.booking_service import BookingService
-from app.services.vnpay_service import VNPayService
+from app.services.sepay_service import SePayService
+from app.services.sse_service import broker
 
 router = APIRouter(tags=["Trips & Bookings"])
 
@@ -56,34 +57,36 @@ def cancel_ticket(
 ):
     return BookingService.cancel_ticket(ticket_id, current_user, db)
 
-@router.put("/api/private/tickets/{ticket_id}/pay", response_model=TicketResponse)
-def pay_ticket(
-    ticket_id: int,
-    request: PayTicketRequest,
+@router.post("/api/private/payment/sepay/create", response_model=TicketResponse)
+def create_sepay_payment(
+    request: SePayCreatePaymentRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return BookingService.pay_ticket_offline(ticket_id, request, current_user, db)
+    ticket = SePayService.create_payment(request.ticketId, current_user, db)
+    return BookingService._to_ticket_response(ticket)
 
-# VNPay Payment endpoints
-@router.post("/api/private/payment/vnpay/create", response_model=VnpayPaymentResponse)
-def create_vnpay_payment(
-    request: VnpayCreatePaymentRequest,
-    http_req: Request,
+
+@router.get("/api/private/payment/{payment_code}/status")
+def payment_status(
+    payment_code: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    client_ip = http_req.headers.get("x-forwarded-for") or http_req.client.host
-    return VNPayService.create_payment_url(request.ticketId, current_user, db, client_ip)
+    return SePayService.get_status(payment_code, current_user, db)
 
-@router.get("/api/public/payment/vnpay/return")
-def vnpay_return(request: Request, db: Session = Depends(get_db)):
-    params = dict(request.query_params)
-    return VNPayService.verify_return(params, db)
 
-@router.post("/api/public/payment/vnpay/ipn")
-async def vnpay_ipn(request: Request, db: Session = Depends(get_db)):
-    # Support form urlencoded or query params
-    form_data = await request.form()
-    params = dict(form_data) if form_data else dict(request.query_params)
-    return VNPayService.process_ipn(params, db)
+@router.post("/api/public/payment/sepay/webhook")
+@router.post("/api/payments/webhook/sepay/", include_in_schema=False)
+@router.post("/api/payments/webhook/sepay", include_in_schema=False)
+async def sepay_webhook(request: Request, db: Session = Depends(get_db)):
+    SePayService.authenticate_webhook(request.headers.get("authorization", ""))
+    try:
+        payload = await request.json()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+    transaction = await SePayService.verify_transaction(payload)
+    event = SePayService.settle(transaction, db)
+    if event:
+        await broker.broadcast("payment.sepay.success", event)
+    return {"success": True}

@@ -486,9 +486,11 @@ class AdminService:
 
     @staticmethod
     def confirm_ticket(ticket_id: int, db: Session) -> AdminTicketDTO:
-        t = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        t = db.query(Ticket).filter(Ticket.id == ticket_id).with_for_update().first()
         if not t:
             raise HTTPException(status_code=404, detail="Ticket not found")
+        if t.payment and t.payment.paymentMethod == "SEPAY" and t.payment.status != PaymentStatus.SUCCESS:
+            raise HTTPException(status_code=409, detail="Vui lòng chờ SePay xác nhận thanh toán trước khi xác nhận vé.")
         t.status = TicketStatus.CONFIRMED
         db.commit()
         db.refresh(t)

@@ -136,7 +136,7 @@ export default function AdminTripsPage() {
     loadFeedbackStats();
   }, [loadFeedbackStats]);
 
-  // ─── SSE subscription: nhận notification booking mới + payment VNPay + feedback ───
+  // ─── SSE subscription: nhận notification booking mới + payment SePay + feedback ───
   useEffect(() => {
     let cancelled = false;
 
@@ -154,10 +154,10 @@ export default function AdminTripsPage() {
         },
         (payment) => {
           if (cancelled) return;
-          console.debug("[SSE] payment.vnpay.success", payment);
+          console.debug("[SSE] payment.sepay.success", payment);
           setPendingPayments((prev) => [payment, ...prev].slice(0, 50));
           toast.success(
-            `💳 VNPay thành công · Vé #${payment.ticketId} · Ghế ${payment.seatNumber} · ${payment.passengerName || "Khách"}`,
+            `💳 SePay thành công · Vé #${payment.ticketId} · Ghế ${payment.seatNumber} · ${payment.passengerName || "Khách"}`,
             { duration: 8000 }
           );
           loadTrips();
@@ -304,7 +304,7 @@ export default function AdminTripsPage() {
                   {pendingPayments.length > 0 && (
                     <span className="flex items-center gap-1">
                       <CreditCard className="w-3 h-3" />
-                      {pendingPayments.length} VNPay
+                      {pendingPayments.length} SePay
                     </span>
                   )}
                 </div>

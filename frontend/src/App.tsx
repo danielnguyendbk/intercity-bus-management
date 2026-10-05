@@ -6,7 +6,6 @@ import ProtectedRoute from "./components/layout/ProtectedRoute";
 
 const LoginPage = React.lazy(() => import("./pages/auth/LoginPage"));
 const RegisterPage = React.lazy(() => import("./pages/auth/RegisterPage"));
-const PaymentReturnPage = React.lazy(() => import("./pages/payment/PaymentReturnPage"));
 
 function PageLoadingFallback() {
   return (
@@ -27,9 +26,6 @@ function App() {
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/auth/register" element={<RegisterPage />} />
 
-          {/* Trang nhận kết quả thanh toán từ VNPay — đặt ngoài ProtectedRoute
-              để đảm bảo VNPay có thể redirect về bất kể trạng thái đăng nhập */}
-          <Route path="/payment/vnpay-return" element={<PaymentReturnPage />} />
 
           {/* Mọi đường dẫn khác đều đi qua đây */}
           <Route

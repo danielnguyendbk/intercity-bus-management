@@ -2,10 +2,8 @@
 // CUSTOMER API — Module: Đặt vé / Thanh toán / Profile (FE)
 // Hàm chính:
 //   - searchTrips / getAllUpcomingTrips / getTripSeats
-//   - bookTicket / createVnpayPayment
 //   - getMyTickets / cancelTicket / payTicket
 //   - getProfile / updateProfile
-//   - getVnpayReturnInfo
 // ============================================================================
 
 import apiClient from "./apiClient";
@@ -75,6 +73,9 @@ export interface TicketRecord {
   // SePay VietQR
   paymentCode?: string;
   qrUrl?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
   expiredAt?: string;
   // Điểm đón / điểm trả
   pickupPoint?: string;
@@ -84,25 +85,6 @@ export interface TicketRecord {
 export interface UpdateProfilePayload {
   fullName: string;
   phone: string;
-}
-
-// ─── VNPay ────────────────────────────────────────────────────────────
-export interface VnpayPaymentResponse {
-  paymentUrl: string;
-  txnRef: string;
-  expireAt: string;
-}
-
-export interface VnpayReturnInfo {
-  txnRef: string;
-  responseCode: string;
-  transactionNo: string;
-  amount: number;
-  bankCode: string;
-  cardType: string;
-  payDate: string;
-  orderInfo: string;
-  success: boolean;
 }
 
 export const searchTrips = (params: {
@@ -149,10 +131,6 @@ export const getProfile = (): Promise<{
 export const updateProfile = (payload: UpdateProfilePayload): Promise<void> =>
   apiClient.put("/auth/profile", payload).then((r) => r.data);
 
-/** Mock payment nhanh (chỉ dùng cho test COD/BANK qua mock endpoint cũ) */
-export const mockPayment = async (data: { ticketId: number; paymentMethod: string }): Promise<TicketRecord> =>
-  apiClient.put<TicketRecord>(`/private/tickets/${data.ticketId}/pay`, { paymentMethod: data.paymentMethod }).then((r) => r.data);
-
 // ─── SePay VietQR ─────────────────────────────────────────────────────
 export interface PaymentStatusResponse {
   paymentCode: string;
@@ -164,21 +142,8 @@ export interface PaymentStatusResponse {
 }
 
 export const getPaymentStatus = (paymentCode: string): Promise<PaymentStatusResponse> =>
-  apiClient.get<PaymentStatusResponse>(`/public/payment/${paymentCode}/status`).then((r) => r.data);
+  apiClient.get<PaymentStatusResponse>(`/private/payment/${encodeURIComponent(paymentCode)}/status`).then((r) => r.data);
 
-export const simulatePayment = (paymentCode: string): Promise<{ success: boolean; status: string; paymentCode?: string }> =>
-  apiClient.post<{ success: boolean; status: string; paymentCode?: string }>("/public/payment/simulate", { paymentCode }).then((r) => r.data);
-
-// ─── VNPay API (Legacy) ────────────────────────────────────────────────
-/** Tạo URL thanh toán VNPay (sandbox/production). Redirect user tới paymentUrl. */
-export const createVnpayPayment = async (ticketId: number): Promise<VnpayPaymentResponse> =>
-  apiClient
-    .post<VnpayPaymentResponse>("/private/payment/vnpay/create", { ticketId })
-    .then((r) => r.data);
-
-/** Lấy thông tin kết quả từ Return URL (frontend query VNPay gọi về). */
-export const getVnpayReturnInfo = async (queryString: string): Promise<VnpayReturnInfo> =>
-  apiClient
-    .get<VnpayReturnInfo>(`/public/payment/vnpay/return${queryString}`)
-    .then((r) => r.data);
+export const createSepayPayment = (ticketId: number): Promise<TicketRecord> =>
+  apiClient.post<TicketRecord>("/private/payment/sepay/create", { ticketId }).then((r) => r.data);
 

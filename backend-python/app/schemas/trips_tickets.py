@@ -69,9 +69,6 @@ class BookTicketRequest(BaseModel):
     pickupPoint: Optional[str] = None
     dropoffPoint: Optional[str] = None
 
-class PayTicketRequest(BaseModel):
-    paymentMethod: PaymentMethod = PaymentMethod.CASH
-
 class TicketResponse(BaseModel):
     id: int
     tripId: Optional[int] = None
@@ -96,13 +93,13 @@ class TicketResponse(BaseModel):
     transactionCode: Optional[str] = None
     transactionTime: Optional[datetime] = None
     ticketCode: Optional[str] = None
+    paymentCode: Optional[str] = None
+    qrUrl: Optional[str] = None
+    bankName: Optional[str] = None
+    accountNumber: Optional[str] = None
+    accountName: Optional[str] = None
     pickupPoint: Optional[str] = None
     dropoffPoint: Optional[str] = None
 
-class VnpayCreatePaymentRequest(BaseModel):
+class SePayCreatePaymentRequest(BaseModel):
     ticketId: int
-
-class VnpayPaymentResponse(BaseModel):
-    paymentUrl: str
-    txnRef: str
-    expireAt: str

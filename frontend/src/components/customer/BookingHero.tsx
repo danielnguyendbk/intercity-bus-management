@@ -27,7 +27,7 @@ interface HighlightItem {
 
 const HIGHLIGHTS: HighlightItem[] = [
   { icon: Zap,         text: "Đặt vé nhanh chóng" },
-  { icon: Shield,      text: "Thanh toán an toàn với VNPay" },
+  { icon: Shield,      text: "Thanh toán an toàn với SePay" },
   { icon: BadgeCheck,  text: "Xác nhận tức thì" },
 ];
 

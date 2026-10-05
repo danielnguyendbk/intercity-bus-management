@@ -83,7 +83,7 @@ export default function RegisterPage() {
             <div className="register-features">
               <div className="register-feature-item">
                 <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <span>Đặt vé trực tuyến 24/7, thanh toán VNPAY an toàn</span>
+                <span>Đặt vé trực tuyến 24/7, thanh toán SePay an toàn</span>
               </div>
               <div className="register-feature-item">
                 <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />

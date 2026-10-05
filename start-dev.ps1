@@ -28,4 +28,4 @@ Write-Host "Backend:  http://localhost:8080" -ForegroundColor Cyan
 Write-Host "Frontend: http://localhost:4173" -ForegroundColor Cyan
 Write-Host "Ngrok:    check http://localhost:4040 for public URL" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Test flow: book ticket -> Quét mã VietQR SePay -> Bấm nút 'Mô phỏng thanh toán (Demo)' hoặc chuyển tiền thật" -ForegroundColor Magenta
+Write-Host "Payment flow: book ticket -> scan SePay VietQR -> wait for verified webhook confirmation" -ForegroundColor Magenta

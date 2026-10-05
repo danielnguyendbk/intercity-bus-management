@@ -61,7 +61,6 @@ apiClient.interceptors.response.use(
     // Nếu gặp 401 với request private (chưa đăng nhập / token hết hạn):
     // - Dispatch event "auth:expired" để UI/AuthContext xử lý (vd: mở modal login)
     // - KHÔNG tự ý xóa token ở đây, vì có thể gây mất session trong flow nhạy cảm
-    //   (vd: PaymentReturnPage đang poll getMyTickets() sau khi redirect từ VNPay).
     //   Nếu cần logout, App-level listener sẽ quyết định.
     if (status === 401 && isPrivateRequest && !isAuthEndpoint) {
       try {

@@ -3,8 +3,8 @@
 // Luồng 4 bước chuẩn production:
 //   STEP 1: Tìm và chọn chuyến
 //   STEP 2: Chọn ghế + Điểm đón + Điểm trả (Desktop 2 cột: Seat Map | Config)
-//   STEP 3: Thông tin hành khách + Phương thức thanh toán (VietQR SePay / COD / VNPay)
-//   STEP 4: Đặt vé thành công + Vé điện tử (Real QR code, SePay polling & simulation)
+//   STEP 3: Thông tin hành khách + Phương thức thanh toán (VietQR SePay / COD)
+//   STEP 4: Chờ thanh toán SePay; chỉ hiển thị vé điện tử sau xác nhận
 // ============================================================================
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -18,10 +18,9 @@ import {
   CreditCard,
   Smartphone,
   QrCode,
-  Copy,
   Loader2,
-  Sparkles,
   ArrowRight,
+  ArrowLeft,
   Printer,
   Bus,
   Clock,
@@ -34,15 +33,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuthStore } from "../../stores/authStore";
 import BookingHero from "../../components/customer/BookingHero";
+import SePayCheckout from "../../components/customer/SePayCheckout";
 import Pagination from "../../components/ui/Pagination";
 import {
   searchTrips,
   getAllUpcomingTrips,
   getTripSeats,
   bookTicket,
-  createVnpayPayment,
-  getPaymentStatus,
-  simulatePayment,
   TripSearchResult,
   SeatStatus,
   TicketRecord,
@@ -57,14 +54,14 @@ import {
 import { formatPrice } from "../../utils/format";
 
 type Step = "search" | "seats" | "checkout" | "success";
-type PaymentMethod = "SEPAY" | "COD" | "VNPAY";
+type PaymentMethod = "SEPAY" | "COD";
 
 const STEPS: Step[] = ["search", "seats", "checkout", "success"];
 const STEP_LABELS: Record<Step, string> = {
   search: "1. Tìm & Chọn chuyến",
   seats: "2. Chọn ghế & Đón/Trả",
   checkout: "3. Thông tin & Thanh toán",
-  success: "4. Hoàn tất & Vé điện tử",
+  success: "4. Trạng thái đặt vé",
 };
 
 const fmtTime = (dt: string) =>
@@ -116,11 +113,10 @@ export default function CustomerBookingPage() {
   // Booking Result & SePay Polling
   const [bookedTicket, setBookedTicket] = useState<TicketRecord | null>(null);
   const [sepayStatus, setSepayStatus] = useState<"PENDING" | "SUCCESS" | "FAILED">("PENDING");
+  const awaitingSepay = paymentMethod === "SEPAY" && sepayStatus !== "SUCCESS";
   const [loadingTrips, setLoadingTrips] = useState(false);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const [simulating, setSimulating] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
 
   // Pagination & Available Trips Filter
   const [currentPage, setCurrentPage] = useState(1);
@@ -163,29 +159,6 @@ export default function CustomerBookingPage() {
     if (user?.fullName && !passengerName) setPassengerName(user.fullName);
     if (user?.phone && !phone) setPhone(user.phone);
   }, [user]);
-
-  // SePay Polling (every 3s when waiting for payment)
-  useEffect(() => {
-    if (step !== "success" || !bookedTicket || paymentMethod !== "SEPAY" || sepayStatus === "SUCCESS") {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        const code = bookedTicket.paymentCode || `PAY-${bookedTicket.id}`;
-        const res = await getPaymentStatus(code);
-        if (res.paymentStatus === "SUCCESS") {
-          setSepayStatus("SUCCESS");
-          toast.success("Thanh toán thành công! Vé đã được xác nhận.");
-          clearInterval(interval);
-        }
-      } catch {
-        // Polling silent catch
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [step, bookedTicket, paymentMethod, sepayStatus]);
 
   // Handlers
   const handleSearch = async () => {
@@ -297,19 +270,8 @@ export default function CustomerBookingPage() {
       if (paymentMethod === "SEPAY") {
         setSepayStatus("PENDING");
         setStep("success");
-        toast.success("Đặt vé thành công! Quý khách quét mã VietQR bên dưới để hoàn tất thanh toán.");
+        toast("Đã tạo yêu cầu đặt vé. Vui lòng thanh toán và chờ SePay xác nhận.", { icon: "⏳" });
         return;
-      }
-
-      if (paymentMethod === "VNPAY") {
-        try {
-          const vnpayRes = await createVnpayPayment(ticket.id);
-          sessionStorage.setItem("pendingVnpayTicketId", String(ticket.id));
-          window.location.href = vnpayRes.paymentUrl;
-          return;
-        } catch (err: any) {
-          toast.error("Không thể khởi tạo cổng thanh toán VNPay. Vui lòng thanh toán qua VietQR.");
-        }
       }
 
       // COD payment
@@ -401,20 +363,18 @@ export default function CustomerBookingPage() {
             return (
               <div key={s} className="flex items-center gap-2 shrink-0">
                 <div
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                    isActive
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${isActive
                       ? "bg-[#0f2849] text-amber-400 ring-2 ring-amber-400/40"
                       : isCompleted
                         ? "bg-emerald-600 text-white"
                         : "bg-slate-100 text-slate-400"
-                  }`}
+                    }`}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : idx + 1}
                 </div>
                 <span
-                  className={`text-xs font-semibold ${
-                    isActive ? "text-[#0f2849]" : isCompleted ? "text-slate-700" : "text-slate-400"
-                  }`}
+                  className={`text-xs font-semibold ${isActive ? "text-[#0f2849]" : isCompleted ? "text-slate-700" : "text-slate-400"
+                    }`}
                 >
                   {STEP_LABELS[s]}
                 </span>
@@ -428,6 +388,26 @@ export default function CustomerBookingPage() {
       {/* ══════════════════════════════════════════════════════
           STEP 1: TÌM & CHỌN CHUYẾN
       ══════════════════════════════════════════════════════ */}
+      {step === "checkout" && (
+        <button
+          type="button"
+          disabled={confirming}
+          onClick={() => setStep("seats")}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:opacity-50"
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Trở lại chọn ghế
+        </button>
+      )}
+      {step === "success" && (
+        <div className="max-w-2xl mx-auto space-y-2">
+          <Link to="/customer/tickets" className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+            <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+            Trở lại vé của tôi
+          </Link>
+          {awaitingSepay && <p className="text-xs text-slate-600">Trở lại không hủy vé. Bạn có thể mở lại thanh toán trong Vé của tôi; nếu đã chuyển tiền, vui lòng không chuyển lại.</p>}
+        </div>
+      )}
       {step === "search" && (
         <div className="space-y-6">
           <BookingHero>
@@ -563,9 +543,8 @@ export default function CustomerBookingPage() {
                       <div
                         key={trip.id}
                         onClick={() => !isSoldOut && handleSelectTrip(trip)}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition-all ${
-                          isSoldOut ? "opacity-60 bg-slate-50" : "hover:border-slate-300 hover:shadow-md cursor-pointer"
-                        }`}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition-all ${isSoldOut ? "opacity-60 bg-slate-50" : "hover:border-slate-300 hover:shadow-md cursor-pointer"
+                          }`}
                       >
                         {/* Left: Route and times */}
                         <div className="space-y-1.5 flex-1 min-w-0 pr-4">
@@ -626,11 +605,10 @@ export default function CustomerBookingPage() {
                               e.stopPropagation();
                               if (!isSoldOut) handleSelectTrip(trip);
                             }}
-                            className={`mt-1 rounded-lg px-4 py-2 text-xs font-semibold shadow-xs transition ${
-                              isSoldOut
+                            className={`mt-1 rounded-lg px-4 py-2 text-xs font-semibold shadow-xs transition ${isSoldOut
                                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                                 : "bg-[#0f2849] hover:bg-[#1a3a6b] text-white"
-                            }`}
+                              }`}
                           >
                             {isSoldOut ? "Hết vé" : "Chọn chuyến"}
                           </button>
@@ -682,7 +660,7 @@ export default function CustomerBookingPage() {
               onClick={() => setStep("search")}
               className="text-xs font-semibold text-slate-600 hover:text-[#0f2849] border border-slate-200 rounded-lg px-3 py-1.5 hover:bg-slate-50 transition"
             >
-              ← Đổi chuyến khác
+              ← Trở lại chọn chuyến
             </button>
           </div>
 
@@ -699,18 +677,16 @@ export default function CustomerBookingPage() {
                     <button
                       type="button"
                       onClick={() => setActiveDeck("DECK1")}
-                      className={`rounded-md px-3 py-1 transition ${
-                        activeDeck === "DECK1" ? "bg-white text-[#0f2849] shadow-xs" : "text-slate-500 hover:text-slate-900"
-                      }`}
+                      className={`rounded-md px-3 py-1 transition ${activeDeck === "DECK1" ? "bg-white text-[#0f2849] shadow-xs" : "text-slate-500 hover:text-slate-900"
+                        }`}
                     >
                       Tầng 1 (Dưới)
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveDeck("DECK2")}
-                      className={`rounded-md px-3 py-1 transition ${
-                        activeDeck === "DECK2" ? "bg-white text-[#0f2849] shadow-xs" : "text-slate-500 hover:text-slate-900"
-                      }`}
+                      className={`rounded-md px-3 py-1 transition ${activeDeck === "DECK2" ? "bg-white text-[#0f2849] shadow-xs" : "text-slate-500 hover:text-slate-900"
+                        }`}
                     >
                       Tầng 2 (Trên)
                     </button>
@@ -751,13 +727,12 @@ export default function CustomerBookingPage() {
                         type="button"
                         onClick={() => handleSelectSeat(seat)}
                         disabled={isBooked}
-                        className={`flex h-12 flex-col items-center justify-center rounded-lg border text-xs font-semibold transition-all ${
-                          isBooked
+                        className={`flex h-12 flex-col items-center justify-center rounded-lg border text-xs font-semibold transition-all ${isBooked
                             ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
                             : isSelected
                               ? "border-amber-500 bg-amber-400 text-slate-950 shadow-sm ring-2 ring-amber-400/40"
                               : "border-emerald-200 bg-emerald-50/80 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100 cursor-pointer"
-                        }`}
+                          }`}
                       >
                         <span>{seat.seatNumber}</span>
                         <span className="text-[10px] font-normal opacity-80">
@@ -789,11 +764,10 @@ export default function CustomerBookingPage() {
                         <div
                           key={point.name}
                           onClick={() => setPickupPoint(point)}
-                          className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${
-                            isSelected
+                          className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${isSelected
                               ? "border-[#0f2849] bg-slate-50 font-medium ring-1 ring-[#0f2849]/20"
                               : "border-slate-200 hover:bg-slate-50/60"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-slate-900">{point.name}</span>
@@ -818,11 +792,10 @@ export default function CustomerBookingPage() {
                         <div
                           key={point.name}
                           onClick={() => setDropoffPoint(point)}
-                          className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${
-                            isSelected
+                          className={`p-2.5 rounded-lg border text-xs cursor-pointer transition ${isSelected
                               ? "border-[#0f2849] bg-slate-50 font-medium ring-1 ring-[#0f2849]/20"
                               : "border-slate-200 hover:bg-slate-50/60"
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-slate-900">{point.name}</span>
@@ -935,11 +908,10 @@ export default function CustomerBookingPage() {
                 {/* SePay VietQR Card */}
                 <div
                   onClick={() => setPaymentMethod("SEPAY")}
-                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
-                    paymentMethod === "SEPAY"
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${paymentMethod === "SEPAY"
                       ? "border-[#0f2849] bg-slate-50/80 shadow-xs"
                       : "border-slate-200 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -958,9 +930,8 @@ export default function CustomerBookingPage() {
                     </div>
                   </div>
                   <div
-                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                      paymentMethod === "SEPAY" ? "border-[#0f2849] bg-[#0f2849]" : "border-slate-300"
-                    }`}
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "SEPAY" ? "border-[#0f2849] bg-[#0f2849]" : "border-slate-300"
+                      }`}
                   >
                     {paymentMethod === "SEPAY" && <Check className="h-3 w-3 text-white" />}
                   </div>
@@ -969,11 +940,10 @@ export default function CustomerBookingPage() {
                 {/* COD Card */}
                 <div
                   onClick={() => setPaymentMethod("COD")}
-                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
-                    paymentMethod === "COD"
+                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${paymentMethod === "COD"
                       ? "border-[#0f2849] bg-slate-50/80 shadow-xs"
                       : "border-slate-200 hover:bg-slate-50"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
@@ -987,42 +957,14 @@ export default function CustomerBookingPage() {
                     </div>
                   </div>
                   <div
-                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                      paymentMethod === "COD" ? "border-[#0f2849] bg-[#0f2849]" : "border-slate-300"
-                    }`}
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === "COD" ? "border-[#0f2849] bg-[#0f2849]" : "border-slate-300"
+                      }`}
                   >
                     {paymentMethod === "COD" && <Check className="h-3 w-3 text-white" />}
                   </div>
                 </div>
 
-                {/* VNPay Card */}
-                <div
-                  onClick={() => setPaymentMethod("VNPAY")}
-                  className={`p-3.5 rounded-xl border-2 cursor-pointer transition flex items-center justify-between ${
-                    paymentMethod === "VNPAY"
-                      ? "border-[#0f2849] bg-slate-50/80 shadow-xs"
-                      : "border-slate-200 hover:bg-slate-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold text-slate-900">Cổng thanh toán VNPay</span>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Thẻ ATM nội địa, Internet Banking, Thẻ quốc tế Visa/Mastercard
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                      paymentMethod === "VNPAY" ? "border-[#0f2849] bg-[#0f2849]" : "border-slate-300"
-                    }`}
-                  >
-                    {paymentMethod === "VNPAY" && <Check className="h-3 w-3 text-white" />}
-                  </div>
-                </div>
+
               </div>
             </div>
           </div>
@@ -1095,9 +1037,10 @@ export default function CustomerBookingPage() {
                 <button
                   type="button"
                   onClick={() => setStep("seats")}
+                  disabled={confirming}
                   className="w-full rounded-lg border border-slate-300 hover:bg-slate-50 py-2.5 text-xs font-semibold text-slate-700 transition"
                 >
-                  ← Quay lại chọn ghế
+                  ← Trở lại chọn ghế
                 </button>
               </div>
             </div>
@@ -1106,137 +1049,26 @@ export default function CustomerBookingPage() {
       )}
 
       {/* ══════════════════════════════════════════════════════
-          STEP 4: ĐẶT VÉ THÀNH CÔNG & VÉ ĐIỆN TỬ
+          STEP 4: TRẠNG THÁI THANH TOÁN & VÉ ĐIỆN TỬ
       ══════════════════════════════════════════════════════ */}
       {step === "success" && bookedTicket && selectedTrip && selectedSeat && (
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Success banner */}
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5 text-center shadow-xs">
-            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-              <Check className="h-6 w-6" />
+          {/* Success is shown only after SePay confirms payment (COD stays separate). */}
+          <div role="status" aria-live="polite" className={`rounded-xl border p-5 text-center shadow-xs ${awaitingSepay ? "border-amber-200 bg-amber-50 text-amber-950" : "border-emerald-200 bg-emerald-50/80 text-emerald-950"}`}>
+            <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full text-white shadow-sm ${awaitingSepay ? "bg-amber-600" : "bg-emerald-600"}`}>
+              {awaitingSepay ? <Clock className="h-6 w-6" /> : <Check className="h-6 w-6" />}
             </div>
-            <h2 className="text-lg font-bold text-emerald-950">Đặt vé thành công!</h2>
-            <p className="text-xs text-emerald-800 mt-1">
-              Mã vé của bạn là <strong className="font-mono text-sm">#{bookedTicket.ticketCode || bookedTicket.id}</strong>.
-              Vé đã được lưu vào danh sách "Vé của tôi".
+            <h2 className="text-lg font-bold">{awaitingSepay ? "Chờ thanh toán SePay" : paymentMethod === "SEPAY" ? "Thanh toán và đặt vé thành công!" : "Đã đặt vé — thanh toán trên xe"}</h2>
+            <p className="text-xs mt-1">
+              Mã đặt vé: <strong className="font-mono text-sm">#{bookedTicket.ticketCode || bookedTicket.id}</strong>.
+              {awaitingSepay
+                ? " Chưa hoàn tất thanh toán. Hệ thống chỉ xác nhận thành công sau khi nhận và xác minh giao dịch từ SePay. Nếu đã chuyển tiền, vui lòng chờ và không chuyển lại."
+                : " Vé đã được lưu vào danh sách Vé của tôi."}
             </p>
           </div>
 
-          {/* SePay VietQR Card if SePay */}
           {paymentMethod === "SEPAY" && (
-            <div className="rounded-xl border border-blue-200 bg-white p-6 shadow-sm text-center space-y-4">
-              <div className="flex items-center justify-center gap-2">
-                <QrCode className="h-5 w-5 text-blue-600" />
-                <h3 className="text-base font-bold text-slate-900">Quét mã VietQR thanh toán tự động</h3>
-              </div>
-
-              {sepayStatus === "SUCCESS" ? (
-                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800">
-                  <div className="flex items-center justify-center gap-1.5 font-bold text-emerald-700 mb-1">
-                    <Check className="h-5 w-5" />
-                    Đã nhận được tiền thanh toán!
-                  </div>
-                  <p className="text-xs text-emerald-600">
-                    Giao dịch đã được SePay xác thực thành công. Vé của bạn đã chuyển sang trạng thái ĐÃ XÁC NHẬN (PAID).
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-xs text-slate-500">
-                    Mở ứng dụng ngân hàng bất kỳ để quét mã VietQR. Nội dung và số tiền đã được điền tự động.
-                  </p>
-
-                  {/* QR Image */}
-                  <div className="mx-auto w-56 h-56 bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-center">
-                    {bookedTicket.qrUrl ? (
-                      <img
-                        src={bookedTicket.qrUrl}
-                        alt="VietQR SePay"
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="text-xs text-slate-400">Đang khởi tạo mã VietQR...</div>
-                    )}
-                  </div>
-
-                  {/* Bank info box */}
-                  <div className="space-y-1.5 text-xs text-left bg-slate-50 p-3.5 rounded-xl border border-slate-200 max-w-sm mx-auto">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Ngân hàng:</span>
-                      <span className="font-bold text-slate-800">BIDV</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Số tài khoản:</span>
-                      <span className="font-mono font-bold text-slate-900">96247NQT001</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Chủ tài khoản:</span>
-                      <span className="font-bold text-slate-900">NGUYEN QUOC THAI</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Số tiền:</span>
-                      <span className="font-bold text-blue-600 text-sm">
-                        {fmtPrice(selectedTrip.basePrice)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                      <span className="text-slate-500">Nội dung chuyển:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-mono font-bold text-[#0f2849] bg-white px-2 py-0.5 rounded border border-slate-300">
-                          {bookedTicket.paymentCode || `PAY-${bookedTicket.id}`}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (bookedTicket.paymentCode) {
-                              navigator.clipboard.writeText(bookedTicket.paymentCode);
-                              setCopiedCode(true);
-                              toast.success("Đã copy nội dung chuyển khoản!");
-                              setTimeout(() => setCopiedCode(false), 2000);
-                            }
-                          }}
-                          className="p-1 text-slate-500 hover:text-slate-800 rounded"
-                          title="Copy nội dung"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Polling Indicator */}
-                  <div className="flex items-center justify-center gap-2 text-xs text-blue-700">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Hệ thống tự động kiểm tra số dư mỗi 3 giây...</span>
-                  </div>
-
-                  {/* Demo Simulate Button */}
-                  <div className="pt-3 border-t border-slate-100 max-w-sm mx-auto">
-                    <button
-                      type="button"
-                      disabled={simulating}
-                      onClick={async () => {
-                        if (!bookedTicket.paymentCode) return;
-                        setSimulating(true);
-                        try {
-                          await simulatePayment(bookedTicket.paymentCode);
-                          setSepayStatus("SUCCESS");
-                          toast.success("Mô phỏng thanh toán SePay thành công!");
-                        } catch {
-                          toast.error("Không thể mô phỏng thanh toán");
-                        } finally {
-                          setSimulating(false);
-                        }
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 hover:bg-amber-600 py-2.5 px-4 text-xs font-bold text-slate-950 transition shadow-xs disabled:opacity-50"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      {simulating ? "Đang xử lý..." : "Mô phỏng thanh toán SePay thành công (Demo)"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <SePayCheckout ticketId={bookedTicket.id} onPaid={() => setSepayStatus("SUCCESS")} />
           )}
 
           {/* Electronic Ticket Details Card (REAL QR CODE) */}
@@ -1248,12 +1080,12 @@ export default function CustomerBookingPage() {
                   {selectedTrip.origin} → {selectedTrip.destination}
                 </h3>
               </div>
-              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700">
+              <span className={`rounded-full border px-3 py-1 text-xs font-bold ${awaitingSepay ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}>
                 {paymentMethod === "SEPAY" && sepayStatus === "SUCCESS"
                   ? "ĐÃ THANH TOÁN"
                   : paymentMethod === "COD"
                     ? "THANH TOÁN TRÊN XE"
-                    : "CHỜ XÁC NHẬN"}
+                    : "CHỜ THANH TOÁN SEPAY"}
               </span>
             </div>
 
@@ -1277,13 +1109,13 @@ export default function CustomerBookingPage() {
               <div className="rounded-lg bg-slate-50 p-2.5 border border-slate-100">
                 <span className="text-slate-500 block mb-0.5">Hình thức:</span>
                 <span className="font-semibold text-slate-800">
-                  {paymentMethod === "SEPAY" ? "VietQR (SePay)" : paymentMethod === "VNPAY" ? "VNPay" : "Tiền mặt (COD)"}
+                  {paymentMethod === "SEPAY" ? "VietQR (SePay)" : "Tiền mặt (COD)"}
                 </span>
               </div>
             </div>
 
-            {/* REAL QR Check-in */}
-            <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+            {/* Do not issue a SePay check-in QR before payment confirmation. */}
+            {!awaitingSepay && <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-200">
               <div className="p-2 border border-slate-200 rounded-lg inline-block bg-white shadow-xs">
                 <QRCodeSVG
                   value={`XEKHACHPRO:${bookedTicket.ticketCode || bookedTicket.id}`}
@@ -1298,18 +1130,18 @@ export default function CustomerBookingPage() {
               <p className="text-[10px] text-slate-400 mt-0.5">
                 Xuất trình mã này cho nhân viên khi lên xe. Có thể quét trực tiếp bằng camera điện thoại.
               </p>
-            </div>
+            </div>}
 
             {/* Actions */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100">
-              <button
+              {!awaitingSepay && <button
                 type="button"
                 onClick={() => window.print()}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
               >
                 <Printer className="h-3.5 w-3.5" />
                 In vé
-              </button>
+              </button>}
 
               <div className="flex gap-2">
                 <Link
