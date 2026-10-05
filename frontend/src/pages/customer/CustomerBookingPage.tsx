@@ -34,6 +34,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { useAuthStore } from "../../stores/authStore";
 import BookingHero from "../../components/customer/BookingHero";
+import Pagination from "../../components/ui/Pagination";
 import {
   searchTrips,
   getAllUpcomingTrips,
@@ -120,6 +121,25 @@ export default function CustomerBookingPage() {
   const [simulating, setSimulating] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // Pagination & Available Trips Filter
+  const [currentPage, setCurrentPage] = useState(1);
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const TRIPS_PER_PAGE = 4;
+
+  const filteredTrips = useMemo(() => {
+    if (onlyAvailable) {
+      return trips.filter((t) => (t.availableSeats ?? 0) > 0);
+    }
+    return trips;
+  }, [trips, onlyAvailable]);
+
+  const totalPages = Math.ceil(filteredTrips.length / TRIPS_PER_PAGE);
+  const validCurrentPage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginatedTrips = useMemo(() => {
+    const start = (validCurrentPage - 1) * TRIPS_PER_PAGE;
+    return filteredTrips.slice(start, start + TRIPS_PER_PAGE);
+  }, [filteredTrips, validCurrentPage]);
+
   // Load initial trips
   const loadTrips = async () => {
     setLoadingTrips(true);
@@ -173,6 +193,7 @@ export default function CustomerBookingPage() {
       return;
     }
     setLoadingTrips(true);
+    setCurrentPage(1);
     try {
       const data = await searchTrips({ origin, destination, date });
       setTrips(data);
@@ -289,6 +310,7 @@ export default function CustomerBookingPage() {
     setSelectedSeat(null);
     setSeats([]);
     setBookedTicket(null);
+    setCurrentPage(1);
     loadTrips();
   };
 
@@ -443,104 +465,141 @@ export default function CustomerBookingPage() {
 
           {/* Trips list */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">
-                Danh sách chuyến xe khả dụng ({trips.length})
-              </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Danh sách chuyến & vé xe khả dụng ({filteredTrips.length})
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Các chuyến xe đang mở bán vé trực tuyến trong hệ thống
+                </p>
+              </div>
+
+              {/* Filter toggle */}
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-xs font-medium text-slate-600 bg-white px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer shadow-xs hover:bg-slate-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={onlyAvailable}
+                    onChange={(e) => {
+                      setOnlyAvailable(e.target.checked);
+                      setCurrentPage(1);
+                    }}
+                    className="rounded border-slate-300 text-amber-500 focus:ring-amber-400 h-4 w-4"
+                  />
+                  <span>Chỉ hiện chuyến còn vé trống</span>
+                </label>
+              </div>
             </div>
 
             {loadingTrips ? (
               <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500">
                 Đang tìm kiếm chuyến xe phù hợp...
               </div>
-            ) : trips.length === 0 ? (
+            ) : filteredTrips.length === 0 ? (
               <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500">
-                Không tìm thấy chuyến xe phù hợp với yêu cầu tìm kiếm.
+                Không tìm thấy chuyến xe nào phù hợp với yêu cầu tìm kiếm.
               </div>
             ) : (
-              <div className="grid gap-3">
-                {trips.map((trip) => {
-                  const isSoldOut = trip.availableSeats === 0;
-                  return (
-                    <div
-                      key={trip.id}
-                      onClick={() => !isSoldOut && handleSelectTrip(trip)}
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition-all ${
-                        isSoldOut ? "opacity-60 bg-slate-50" : "hover:border-slate-300 hover:shadow-md cursor-pointer"
-                      }`}
-                    >
-                      {/* Left: Route and times */}
-                      <div className="space-y-1.5 flex-1 min-w-0 pr-4">
-                        <div className="flex items-center gap-2 text-base font-bold text-slate-900">
-                          <span>{trip.origin}</span>
-                          <ArrowRight className="h-4 w-4 text-slate-400" />
-                          <span>{trip.destination}</span>
+              <>
+                <div className="grid gap-3">
+                  {paginatedTrips.map((trip) => {
+                    const isSoldOut = trip.availableSeats === 0;
+                    return (
+                      <div
+                        key={trip.id}
+                        onClick={() => !isSoldOut && handleSelectTrip(trip)}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-xs transition-all ${
+                          isSoldOut ? "opacity-60 bg-slate-50" : "hover:border-slate-300 hover:shadow-md cursor-pointer"
+                        }`}
+                      >
+                        {/* Left: Route and times */}
+                        <div className="space-y-1.5 flex-1 min-w-0 pr-4">
+                          <div className="flex items-center gap-2 text-base font-bold text-slate-900">
+                            <span>{trip.origin}</span>
+                            <ArrowRight className="h-4 w-4 text-slate-400" />
+                            <span>{trip.destination}</span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <span className="flex items-center gap-1 font-semibold text-slate-800">
+                              <Clock className="h-3.5 w-3.5 text-amber-500" />
+                              {fmtTime(trip.departureTime)} → {fmtTime(trip.arrivalTime)}
+                            </span>
+                            <span>·</span>
+                            <span>{fmtDate(trip.departureTime)}</span>
+                            <span>·</span>
+                            <span className="flex items-center gap-1 font-medium text-slate-700">
+                              <Bus className="h-3.5 w-3.5 text-blue-600" />
+                              {trip.busLabel || "Xe giường nằm"}
+                            </span>
+                          </div>
+
+                          {/* Seat occupancy bar */}
+                          <div className="flex items-center gap-2 pt-1 text-xs">
+                            {isSoldOut ? (
+                              <span className="font-semibold text-rose-600">Hết chỗ</span>
+                            ) : (
+                              <>
+                                <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-emerald-500 rounded-full"
+                                    style={{
+                                      width: `${Math.min(
+                                        100,
+                                        ((trip.totalSeats - trip.availableSeats) / trip.totalSeats) * 100
+                                      )}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-emerald-700 font-medium">
+                                  Còn <strong>{trip.availableSeats}</strong>/{trip.totalSeats} vé khả dụng
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                          <span className="flex items-center gap-1 font-semibold text-slate-800">
-                            <Clock className="h-3.5 w-3.5 text-amber-500" />
-                            {fmtTime(trip.departureTime)} → {fmtTime(trip.arrivalTime)}
-                          </span>
-                          <span>·</span>
-                          <span>{fmtDate(trip.departureTime)}</span>
-                          <span>·</span>
-                          <span className="flex items-center gap-1 font-medium text-slate-700">
-                            <Bus className="h-3.5 w-3.5 text-blue-600" />
-                            {trip.busLabel || "Xe giường nằm"}
-                          </span>
-                        </div>
-
-                        {/* Seat occupancy bar */}
-                        <div className="flex items-center gap-2 pt-1 text-xs">
-                          {isSoldOut ? (
-                            <span className="font-semibold text-rose-600">Hết chỗ</span>
-                          ) : (
-                            <>
-                              <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-emerald-500 rounded-full"
-                                  style={{
-                                    width: `${Math.min(
-                                      100,
-                                      ((trip.totalSeats - trip.availableSeats) / trip.totalSeats) * 100
-                                    )}%`,
-                                  }}
-                                />
-                              </div>
-                              <span className="text-emerald-700 font-medium">
-                                Còn <strong>{trip.availableSeats}</strong>/{trip.totalSeats} ghế
-                              </span>
-                            </>
-                          )}
+                        {/* Right: Price & CTA */}
+                        <div className="mt-3 sm:mt-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 shrink-0">
+                          <div className="text-base font-extrabold text-[#0f2849]">
+                            {fmtPrice(trip.basePrice)}
+                          </div>
+                          <button
+                            type="button"
+                            disabled={isSoldOut}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isSoldOut) handleSelectTrip(trip);
+                            }}
+                            className={`mt-1 rounded-lg px-4 py-2 text-xs font-semibold shadow-xs transition ${
+                              isSoldOut
+                                ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                                : "bg-[#0f2849] hover:bg-[#1a3a6b] text-white"
+                            }`}
+                          >
+                            {isSoldOut ? "Hết vé" : "Chọn chuyến"}
+                          </button>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
 
-                      {/* Right: Price & CTA */}
-                      <div className="mt-3 sm:mt-0 flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 shrink-0">
-                        <div className="text-base font-extrabold text-[#0f2849]">
-                          {fmtPrice(trip.basePrice)}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={isSoldOut}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!isSoldOut) handleSelectTrip(trip);
-                          }}
-                          className={`mt-1 rounded-lg px-4 py-2 text-xs font-semibold shadow-xs transition ${
-                            isSoldOut
-                              ? "bg-slate-200 text-slate-400 cursor-not-allowed"
-                              : "bg-[#0f2849] hover:bg-[#1a3a6b] text-white"
-                          }`}
-                        >
-                          {isSoldOut ? "Hết vé" : "Chọn chuyến"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="pt-2">
+                    <Pagination
+                      currentPage={validCurrentPage}
+                      totalPages={totalPages}
+                      onPageChange={(page) => {
+                        setCurrentPage(page);
+                        window.scrollTo({ top: 380, behavior: "smooth" });
+                      }}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

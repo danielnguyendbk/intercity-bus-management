@@ -11,12 +11,19 @@ Thư mục `backend-python/` chứa toàn bộ Backend đã được chuyển đ
    cd backend-python
    ```
 
-2. Cài đặt các thư viện phụ thuộc (nếu chưa cài):
+2. Kích hoạt môi trường ảo (Virtualenv) đã có sẵn:
+   - Trên Windows (PowerShell/CMD):
+     ```powershell
+     .\venv\Scripts\activate
+     ```
+   *(Hoặc chạy trực tiếp bằng python của venv: `.\venv\Scripts\python.exe run.py`)*
+
+3. Cài đặt các thư viện (nếu cần bổ sung):
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Khởi chạy server:
+4. Khởi chạy server:
    ```bash
    python run.py
    ```

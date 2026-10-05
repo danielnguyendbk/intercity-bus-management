@@ -23,32 +23,40 @@ class BookingService:
     def get_upcoming_trips(db: Session, target_date: Optional[date] = None) -> List[TripSearchResponse]:
         today = target_date or date.today()
         start_time = datetime.combine(today, datetime.min.time())
-        end_time = datetime.combine(today + timedelta(days=30), datetime.max.time())
 
-        trips = db.query(Trip).filter(
+        query = db.query(Trip).filter(
             Trip.departureTime >= start_time,
-            Trip.departureTime <= end_time
-        ).all()
+            Trip.status != TripStatus.CANCELLED
+        )
+        if target_date:
+            end_time = datetime.combine(target_date, datetime.max.time())
+            query = query.filter(Trip.departureTime <= end_time)
 
+        trips = query.order_by(Trip.departureTime.asc()).all()
         return [BookingService._to_trip_search_response(t, db) for t in trips]
 
     @staticmethod
     def search_trips(db: Session, origin: Optional[str], destination: Optional[str], target_date: Optional[date]) -> List[TripSearchResponse]:
-        search_date = target_date or date.today()
-        start_time = datetime.combine(search_date, datetime.min.time())
-        end_time = datetime.combine(search_date, datetime.max.time())
-
         query = db.query(Trip).join(Route, Trip.route_id == Route.id).filter(
-            Trip.departureTime >= start_time,
-            Trip.departureTime <= end_time
+            Trip.status != TripStatus.CANCELLED
         )
+
+        if target_date:
+            start_time = datetime.combine(target_date, datetime.min.time())
+            end_time = datetime.combine(target_date, datetime.max.time())
+            query = query.filter(
+                Trip.departureTime >= start_time,
+                Trip.departureTime <= end_time
+            )
+        else:
+            query = query.filter(Trip.departureTime >= datetime.now() - timedelta(hours=2))
 
         if origin and origin.strip():
             query = query.filter(Route.origin.ilike(f"%{origin.strip()}%"))
         if destination and destination.strip():
             query = query.filter(Route.destination.ilike(f"%{destination.strip()}%"))
 
-        trips = query.all()
+        trips = query.order_by(Trip.departureTime.asc()).all()
         return [BookingService._to_trip_search_response(t, db) for t in trips]
 
     @staticmethod
