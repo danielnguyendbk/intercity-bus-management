@@ -17,7 +17,6 @@ export const STATUS_COLORS: Record<string, string> = {
 export const ROLE_LABELS: Record<UserRole, string> = {
   ADMIN: "Quản trị viên",
   CUSTOMER: "Khách hàng",
-  DISPATCHER: "Điều phối viên",
 };
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
@@ -46,6 +45,12 @@ export function formatStatusLabel(status: string) {
       return "Đã xác nhận";
     case "PAID":
       return "Đã thanh toán";
+    case "ACTIVE":
+      return "Hoạt động";
+    case "LOCKED":
+      return "Bị khóa";
+    case "INACTIVE":
+      return "Đã xóa";
     default:
       return status;
   }

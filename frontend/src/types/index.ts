@@ -1,4 +1,4 @@
-export type UserRole = "ADMIN" | "CUSTOMER" | "DISPATCHER";
+export type UserRole = "ADMIN" | "CUSTOMER";
 
 export type BusStatus = "AVAILABLE" | "RUNNING" | "MAINTENANCE";
 export type TripStatus =

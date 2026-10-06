@@ -17,7 +17,7 @@ import {
 import { User } from "../types";
 
 function normalizeRole(role: string | undefined): User["role"] {
-  if (role === "ADMIN" || role === "CUSTOMER" || role === "DISPATCHER") {
+  if (role === "ADMIN" || role === "CUSTOMER") {
     return role as User["role"];
   }
   // Unknown role from persisted state: treat as CUSTOMER instead of logging out

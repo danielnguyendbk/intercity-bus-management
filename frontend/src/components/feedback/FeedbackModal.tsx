@@ -138,24 +138,24 @@ export default function FeedbackModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto border border-slate-200">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-pink-500 to-rose-500 px-6 py-4 flex items-center justify-between text-white">
+        <div className="sticky top-0 z-10 bg-[#0f2849] px-6 py-4 flex items-center justify-between text-white border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white/20 p-2">
+            <div className="rounded-xl bg-white/10 p-2 text-emerald-400">
               <MessageCircle className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold">Gửi phản hồi / Đánh giá</h2>
-              <p className="text-xs text-pink-100">Phản hồi sẽ được admin xem và trả lời</p>
+              <p className="text-xs text-slate-300">Phản hồi của bạn sẽ được ban quản trị tiếp nhận & xử lý</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="hover:bg-white/20 p-1.5 rounded-full transition"
+            className="hover:bg-white/10 p-1.5 rounded-lg text-slate-300 hover:text-white transition"
             type="button"
           >
             <X size={20} />
@@ -165,7 +165,7 @@ export default function FeedbackModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Trip selector */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Chuyến liên quan <span className="text-slate-400 font-normal">(không bắt buộc)</span>
             </label>
             <select
@@ -173,7 +173,7 @@ export default function FeedbackModal({
               onChange={(e) =>
                 setTripId(e.target.value ? Number(e.target.value) : null)
               }
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 bg-slate-50"
+              className="w-full h-10 px-3.5 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 bg-slate-50"
             >
               <option value="">— Không liên quan đến chuyến cụ thể —</option>
               {tripOptions.map((opt) => (
@@ -186,7 +186,7 @@ export default function FeedbackModal({
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Loại phản hồi
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -199,19 +199,19 @@ export default function FeedbackModal({
                     onClick={() => setCategory(opt.value)}
                     className={`relative overflow-hidden rounded-xl border p-2.5 text-left transition-all ${
                       active
-                        ? "border-pink-400 bg-pink-50 shadow-sm"
+                        ? "border-emerald-500 bg-emerald-50/50 shadow-sm"
                         : "border-slate-200 hover:border-slate-300 bg-white"
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <div
-                        className={`flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${opt.color} text-white`}
+                        className={`flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700`}
                       >
                         {opt.icon}
                       </div>
                       <div className="min-w-0">
                         <p
-                          className={`text-xs font-bold ${active ? "text-pink-700" : "text-slate-700"}`}
+                          className={`text-xs font-bold ${active ? "text-emerald-700" : "text-slate-700"}`}
                         >
                           {opt.label}
                         </p>
@@ -228,8 +228,8 @@ export default function FeedbackModal({
 
           {/* Rating */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Đánh giá <span className="text-slate-400 font-normal">(không bắt buộc)</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Đánh giá sao <span className="text-slate-400 font-normal">(không bắt buộc)</span>
             </label>
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4, 5].map((n) => {
@@ -244,7 +244,7 @@ export default function FeedbackModal({
                     className="transition-transform hover:scale-110"
                   >
                     <Star
-                      className={`h-8 w-8 ${
+                      className={`h-7 w-7 ${
                         filled
                           ? "fill-amber-400 text-amber-400"
                           : "text-slate-300"
@@ -263,7 +263,7 @@ export default function FeedbackModal({
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Tiêu đề <span className="text-rose-500">*</span>
             </label>
             <input
@@ -272,7 +272,7 @@ export default function FeedbackModal({
               onChange={(e) => setSubject(e.target.value)}
               maxLength={150}
               placeholder="Tóm tắt ngắn gọn vấn đề"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-400"
+              className="w-full h-10 px-3.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30"
               required
             />
             <p className="mt-1 text-[11px] text-slate-400 text-right">
@@ -282,16 +282,16 @@ export default function FeedbackModal({
 
           {/* Content */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Nội dung chi tiết <span className="text-rose-500">*</span>
             </label>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               maxLength={MAX_CONTENT}
-              rows={5}
+              rows={4}
               placeholder="Mô tả chi tiết vấn đề, góp ý hoặc lời khen của bạn..."
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none"
+              className="w-full p-3 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 resize-none"
               required
             />
             <p
@@ -304,18 +304,18 @@ export default function FeedbackModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={!canSubmit}
-              className="flex-1 inline-flex justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-200 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="inline-flex justify-center items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-5 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Send className="h-4 w-4" />
               {submitting ? "Đang gửi..." : "Gửi phản hồi"}

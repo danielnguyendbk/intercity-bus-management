@@ -66,8 +66,7 @@ button:disabled {
 .admin-theme .admin-card {
   background-color: var(--admin-bg-card);
   border: 1px solid var(--admin-border);
-  border-radius: 12px;
-  box-shadow: var(--shadow-sm);
+  border-radius: 10px;
 }
 
 .admin-theme .admin-panel {
@@ -81,7 +80,7 @@ button:disabled {
 .admin-theme textarea {
   color: var(--admin-text);
   background-color: var(--admin-bg-soft);
-  border: 1px solid var(--admin-border-strong);
+  border: 1px solid var(--admin-border);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
@@ -97,13 +96,48 @@ select option {
 .admin-theme select:focus,
 .admin-theme textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .admin-theme input::placeholder,
 .admin-theme textarea::placeholder {
   color: var(--admin-muted-2);
+}
+
+.admin-field-input,
+.admin-field-select {
+  height: 2.5rem;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-sidebar);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-field-input:focus,
+.admin-field-select:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.admin-field-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Chrome/Safari dark autofill fix */
+.admin-theme input:-webkit-autofill,
+.admin-theme input:-webkit-autofill:hover, 
+.admin-theme input:-webkit-autofill:focus,
+.admin-theme select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text-primary) !important;
+  -webkit-box-shadow: 0 0 0px 1000px #101c2d inset !important;
+  box-shadow: 0 0 0px 1000px #101c2d inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* ==================== CUSTOMER LIGHT SURFACES ==================== */

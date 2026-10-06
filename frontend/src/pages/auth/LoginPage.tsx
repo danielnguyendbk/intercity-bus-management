@@ -15,7 +15,6 @@ import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 
 const roleRedirect: Record<UserRole, string> = {
   ADMIN: "/admin/dashboard",
-  DISPATCHER: "/dispatcher/dashboard",
   CUSTOMER: "/customer/booking",
 };
 
@@ -128,14 +127,6 @@ export default function LoginPage() {
                     >
                       <span className="login-role-dot customer" />
                       Khách hàng
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole("DISPATCHER")}
-                      className={`login-role-btn ${role === "DISPATCHER" ? "active" : ""}`}
-                    >
-                      <span className="login-role-dot dispatcher" />
-                      Điều phối
                     </button>
                     <button
                       type="button"
@@ -576,9 +567,7 @@ export default function LoginPage() {
           background: #38bdf8;
         }
 
-        .login-role-dot.dispatcher {
-          background: #f59e0b;
-        }
+
 
         .login-role-dot.admin {
           background: #a855f7;

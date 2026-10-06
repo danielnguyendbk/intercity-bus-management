@@ -26,6 +26,9 @@ const STATUS_VARIANT_MAP: Record<string, BadgeVariant> = {
   PAID: "success",
   EXPIRED: "neutral",
   REFUNDED: "info",
+  ACTIVE: "success",
+  LOCKED: "warning",
+  INACTIVE: "danger",
 };
 
 export default function StatusBadge({

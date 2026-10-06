@@ -38,7 +38,6 @@ const AdminTicketsPage = React.lazy(() => import("../../pages/admin/AdminTickets
 const AdminAssignmentsPage = React.lazy(() => import("../../pages/admin/AdminAssignmentsPage"));
 const AdminRevenuePage = React.lazy(() => import("../../pages/admin/AdminRevenuePage"));
 
-const DispatcherDashboardPage = React.lazy(() => import("../../pages/dispatcher/DispatcherDashboardPage"));
 
 const CustomerBookingPage = React.lazy(() => import("../../pages/customer/CustomerBookingPage"));
 const CustomerTicketsPage = React.lazy(() => import("../../pages/customer/CustomerTicketsPage"));
@@ -60,10 +59,6 @@ const MENU_CONFIG: Record<UserRole, MenuItem[]> = {
     { label: "Chuyến & tuyến xe", to: "/admin/trips", icon: MapPin },
     { label: "Quản lý vé", to: "/admin/tickets", icon: Ticket },
   ],
-  DISPATCHER: [
-    { label: "Điều phối & Phân công", to: "/dispatcher/dashboard", icon: ClipboardList },
-    { label: "Lịch trình chuyến", to: "/dispatcher/trips", icon: MapPin },
-  ],
   CUSTOMER: [
     { label: "Đặt vé", to: "/customer/booking", icon: Ticket },
     { label: "Vé của tôi", to: "/customer/tickets", icon: ClipboardList },
@@ -73,7 +68,6 @@ const MENU_CONFIG: Record<UserRole, MenuItem[]> = {
 
 const DEFAULT_PATHS: Record<UserRole, string> = {
   ADMIN: "/admin/dashboard",
-  DISPATCHER: "/dispatcher/dashboard",
   CUSTOMER: "/customer/booking",
 };
 
@@ -111,7 +105,7 @@ export default function MainLayout() {
   };
 
   return (
-    <div className={`min-h-screen flex ${isCustomer ? "customer-layout bg-slate-50 text-slate-900" : "admin-theme bg-[#0b1329] text-slate-100"}`}>
+    <div className={`min-h-screen flex ${isCustomer ? "customer-layout bg-slate-50 text-slate-900" : "admin-theme bg-[#0b1220] text-slate-100"}`}>
       {/* Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
@@ -123,21 +117,21 @@ export default function MainLayout() {
 
       {/* Main Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#0f2849] border-r border-[#1a3a6b]/50 text-white transition-all duration-300 ease-in-out ${
-          isCollapsed ? "w-[72px]" : "w-64"
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#111c2e] border-r border-white/[0.08] text-white transition-all duration-200 ease-in-out ${
+          isCollapsed ? "w-[68px]" : "w-[236px]"
         } ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Brand Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-white/10">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-md">
-              <Bus className="h-5 w-5 text-slate-950" />
+        <div className="flex h-[60px] items-center justify-between px-4 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <Bus className="h-4 w-4" />
             </div>
             {!isCollapsed && (
               <div className="truncate">
-                <span className="text-base font-bold tracking-tight text-white">XeKhách Pro</span>
-                <span className="block text-[11px] font-medium text-amber-300/90 tracking-wide uppercase">
-                  {role === "ADMIN" ? "Quản trị hệ thống" : role === "DISPATCHER" ? "Cổng điều phối" : "Vận tải hành khách"}
+                <span className="text-sm font-bold tracking-tight text-white">XeKhách Pro</span>
+                <span className="block text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                  {role === "ADMIN" ? "Quản trị hệ thống" : "Vận tải hành khách"}
                 </span>
               </div>
             )}
@@ -147,7 +141,7 @@ export default function MainLayout() {
           <button
             type="button"
             onClick={() => setIsMobileOpen(false)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
+            className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Đóng menu"
           >
             <X className="h-5 w-5" />
@@ -155,9 +149,9 @@ export default function MainLayout() {
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-1">
           {!isCollapsed && (
-            <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <div className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Menu điều hướng
             </div>
           )}
@@ -170,33 +164,37 @@ export default function MainLayout() {
                 to={item.to}
                 title={isCollapsed ? item.label : undefined}
                 className={({ isActive }) =>
-                  `group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                  `group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-white/10 text-white font-semibold shadow-sm border-l-4 border-amber-400"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white"
+                      ? "bg-emerald-500/10 text-white font-semibold border-l-2 border-emerald-400"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
                   } ${isCollapsed ? "justify-center" : ""}`
                 }
               >
-                <Icon className="h-5 w-5 shrink-0 text-amber-400/90 transition-transform group-hover:scale-105" />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
+                {({ isActive }) => (
+                  <>
+                    <Icon className={`h-4 w-4 shrink-0 transition-colors ${isActive ? "text-emerald-400" : "text-slate-400 group-hover:text-slate-300"}`} />
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  </>
+                )}
               </NavLink>
             );
           })}
         </nav>
 
         {/* User Card & Collapse Action */}
-        <div className="border-t border-white/10 p-3 bg-black/15">
+        <div className="border-t border-white/[0.08] p-2.5 bg-[#0e1726]">
           {/* User profile row */}
-          <div className={`flex items-center gap-3 p-2 rounded-lg ${isCollapsed ? "justify-center" : ""}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 font-bold text-slate-950 text-sm shadow">
-              {user?.fullName?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || "U"}
+          <div className={`flex items-center gap-2.5 p-1.5 rounded-md ${isCollapsed ? "justify-center" : ""}`}>
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-800 text-emerald-400 font-semibold text-xs border border-emerald-500/20">
+              {user?.fullName?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || "A"}
             </div>
             {!isCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-semibold text-white leading-tight">
-                  {user?.fullName || user?.username || "Người dùng"}
+                <p className="truncate text-xs font-semibold text-slate-200 leading-tight">
+                  {user?.fullName || user?.username || "Admin"}
                 </p>
-                <p className="truncate text-[11px] text-amber-300">
+                <p className="truncate text-[10px] text-slate-400">
                   {ROLE_LABELS[role] || role}
                 </p>
               </div>
@@ -204,16 +202,16 @@ export default function MainLayout() {
           </div>
 
           {/* Action buttons */}
-          <div className="mt-2 flex items-center gap-1.5">
+          <div className="mt-1.5 flex items-center gap-1">
             <button
               type="button"
               onClick={handleLogout}
-              className={`flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 hover:text-rose-100 transition-colors ${
+              className={`flex-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors ${
                 isCollapsed ? "justify-center" : ""
               }`}
               title="Đăng xuất khỏi hệ thống"
             >
-              <LogOut className="h-4 w-4 shrink-0" />
+              <LogOut className="h-3.5 w-3.5 shrink-0" />
               {!isCollapsed && <span>Đăng xuất</span>}
             </button>
 
@@ -221,11 +219,11 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="hidden lg:flex items-center justify-center rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+              className="hidden lg:flex items-center justify-center rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
               title={isCollapsed ? "Mở rộng thanh menu" : "Thu gọn thanh menu"}
               aria-label={isCollapsed ? "Mở rộng thanh menu" : "Thu gọn thanh menu"}
             >
-              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
             </button>
           </div>
         </div>
@@ -233,31 +231,31 @@ export default function MainLayout() {
 
       {/* Main Content Area */}
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
-          isCollapsed ? "lg:ml-[72px]" : "lg:ml-64"
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ${
+          isCollapsed ? "lg:ml-[68px]" : "lg:ml-[236px]"
         }`}
       >
         {/* Top Header */}
         <header
-          className={`sticky top-0 z-30 flex h-16 items-center justify-between px-4 sm:px-6 border-b backdrop-blur-md transition-colors ${
+          className={`sticky top-0 z-30 flex h-[60px] items-center justify-between px-4 sm:px-6 border-b transition-colors ${
             isCustomer
               ? "bg-white/90 border-slate-200 text-slate-900"
-              : "bg-[#0b1329]/90 border-white/10 text-white"
+              : "bg-[#0b1220]/95 backdrop-blur-sm border-white/[0.08] text-white"
           }`}
         >
-          {/* Left: Mobile hamburger & breadcrumbs */}
+          {/* Left: Mobile hamburger & title */}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsMobileOpen(true)}
-              className="rounded-lg p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 lg:hidden"
+              className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden"
               aria-label="Mở menu"
             >
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold tracking-tight">
-                {isCustomer ? "Cổng thông tin vé xe" : role === "DISPATCHER" ? "Phân hệ Điều phối viên" : "Quản trị hệ thống"}
+              <span className="font-semibold text-slate-200">
+                {isCustomer ? "Cổng thông tin vé xe" : "Quản trị hệ thống"}
               </span>
             </div>
           </div>
@@ -265,13 +263,13 @@ export default function MainLayout() {
           {/* Right: Date & Status indicator */}
           <div className="flex items-center gap-3">
             <div
-              className={`hidden sm:flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium border ${
+              className={`hidden sm:flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium border ${
                 isCustomer
                   ? "bg-slate-100 border-slate-200 text-slate-700"
-                  : "bg-white/5 border-white/10 text-slate-300"
+                  : "bg-white/[0.03] border-white/[0.06] text-slate-300"
               }`}
             >
-              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>
                 {new Date().toLocaleDateString("vi-VN", {
                   weekday: "short",
@@ -283,15 +281,15 @@ export default function MainLayout() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-[#0f2849] text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-400/40">
-                {user?.fullName?.charAt(0) || user?.username?.charAt(0) || "U"}
+              <div className="h-7 w-7 rounded-full bg-slate-800 text-emerald-400 flex items-center justify-center font-bold text-xs border border-emerald-500/20">
+                {user?.fullName?.charAt(0)?.toUpperCase() || user?.username?.charAt(0)?.toUpperCase() || "A"}
               </div>
             </div>
           </div>
         </header>
 
         {/* Main Body Pages */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-7 max-w-[1480px] w-full mx-auto">
           <React.Suspense
             fallback={
               <div className="flex h-64 items-center justify-center">
@@ -313,9 +311,8 @@ export default function MainLayout() {
               <Route path="/admin/tickets" element={<AdminTicketsPage />} />
               <Route path="/admin/routes" element={<Navigate to="/admin/trips" replace />} />
 
-              {/* DISPATCHER ROUTES */}
-              <Route path="/dispatcher/dashboard" element={<DispatcherDashboardPage />} />
-              <Route path="/dispatcher/trips" element={<AdminTripsPage />} />
+              {/* LEGACY DISPATCHER REDIRECT */}
+              <Route path="/dispatcher/*" element={<Navigate to="/admin/assignments" replace />} />
 
               {/* CUSTOMER ROUTES */}
               <Route path="/customer/booking" element={<CustomerBookingPage />} />

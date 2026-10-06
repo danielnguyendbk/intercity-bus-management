@@ -58,6 +58,7 @@ class AdminService:
                         busType=b.busType.value if b.busType else "",
                         status=b.status.value if b.status else "",
                         insuranceExpiry=str(b.insuranceExpiry),
+                        expiryDate=str(b.insuranceExpiry),
                         alertType="EXPIRED"
                     ))
                 elif b.insuranceExpiry < thirty_days:
@@ -67,6 +68,7 @@ class AdminService:
                         busType=b.busType.value if b.busType else "",
                         status=b.status.value if b.status else "",
                         insuranceExpiry=str(b.insuranceExpiry),
+                        expiryDate=str(b.insuranceExpiry),
                         alertType="EXPIRING_SOON"
                     ))
 
@@ -388,6 +390,7 @@ class AdminService:
         db.add(bus)
         db.commit()
         db.refresh(bus)
+        AdminService.sync_bus_seats(bus.id, bus.totalSeats, db)
         return BusDetailResponse(
             id=bus.id,
             licensePlate=bus.licensePlate,
@@ -397,6 +400,40 @@ class AdminService:
             lastMaintenanceDate=bus.lastMaintenanceDate,
             insuranceExpiry=bus.insuranceExpiry
         )
+
+    @staticmethod
+    def sync_bus_seats(bus_id: int, total_seats: int, db: Session, seats_per_row: int = 2):
+        if not total_seats or total_seats <= 0:
+            return
+        existing_seats = db.query(Seat).filter(Seat.bus_id == bus_id).all()
+        existing_by_num = {s.seatNumber: s for s in existing_seats}
+
+        needed_numbers = []
+        for i in range(total_seats):
+            row_char = chr(ord('A') + (i // seats_per_row))
+            col_num = (i % seats_per_row) + 1
+            seat_num = f"{row_char}{col_num}"
+            needed_numbers.append((seat_num, i % seats_per_row, i // seats_per_row))
+
+        needed_set = {num for num, _, _ in needed_numbers}
+
+        for seat_num, pos_x, pos_y in needed_numbers:
+            if seat_num not in existing_by_num:
+                new_seat = Seat(
+                    bus_id=bus_id,
+                    seatNumber=seat_num,
+                    positionX=pos_x,
+                    positionY=pos_y
+                )
+                db.add(new_seat)
+
+        for s in existing_seats:
+            if s.seatNumber not in needed_set:
+                has_tickets = db.query(Ticket).filter(Ticket.seat_id == s.id).first() is not None
+                if not has_tickets:
+                    db.delete(s)
+
+        db.commit()
 
     # ── Route Management ──
     @staticmethod

@@ -20,7 +20,8 @@ class BusInsuranceAlert(BaseModel):
     licensePlate: str
     busType: str
     status: str
-    insuranceExpiry: str
+    insuranceExpiry: Optional[str] = None
+    expiryDate: Optional[str] = None
     alertType: str
 
 class AdminDashboardResponse(BaseModel):

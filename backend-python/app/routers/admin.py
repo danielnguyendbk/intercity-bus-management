@@ -109,6 +109,9 @@ def get_trip_detail(trip_id: int, db: Session = Depends(get_db)):
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.bus and trip.bus.totalSeats and len(trip.bus.seats) != trip.bus.totalSeats:
+        AdminService.sync_bus_seats(trip.bus.id, trip.bus.totalSeats, db)
+        db.refresh(trip.bus)
     seats = []
     tickets = []
     active_statuses = {TicketStatus.CANCELLED, TicketStatus.REFUNDED, TicketStatus.EXPIRED}
@@ -120,7 +123,13 @@ def get_trip_detail(trip_id: int, db: Session = Depends(get_db)):
             tickets.append({"id": ticket.id, "seatNumber": seat.seatNumber, "passengerName": passenger.fullName if passenger else "", "passengerPhone": passenger.phone if passenger else "", "price": ticket.price, "status": ticket.status.value, "bookedAt": ticket.bookedAt, "pickupPoint": ticket.pickupPoint, "dropoffPoint": ticket.dropoffPoint, "paymentMethod": ticket.payment.paymentMethod.value if ticket.payment and hasattr(ticket.payment.paymentMethod, "value") else (ticket.payment.paymentMethod if ticket.payment else None), "paymentStatus": ticket.payment.status.value if ticket.payment else None, "paidAt": ticket.paidAt})
     route = trip.route
     bus = trip.bus
-    return {**_trip_response(trip), "route": {"id": route.id, "origin": route.origin, "destination": route.destination, "distanceKm": route.distanceKm, "estimatedDurationMin": route.estimatedDurationMin, "basePrice": route.basePrice} if route else None, "bus": {"id": bus.id, "licensePlate": bus.licensePlate, "busType": bus.busType.value if bus.busType else "", "totalSeats": bus.totalSeats, "status": bus.status.value if bus.status else ""} if bus else None, "seats": seats, "tickets": tickets, "estimatedRevenue": sum((ticket.price or 0) for ticket in trip.tickets if ticket.status not in active_statuses), "actualRevenue": sum((ticket.price or 0) for ticket in trip.tickets if ticket.status == TicketStatus.PAID)}
+    trip_data = _trip_response(trip)
+    actual_total = len(seats) if seats else (bus.totalSeats if bus else 0)
+    actual_booked = len(tickets)
+    trip_data["totalSeats"] = actual_total
+    trip_data["bookedSeats"] = actual_booked
+    trip_data["availableSeats"] = max(actual_total - actual_booked, 0)
+    return {**trip_data, "route": {"id": route.id, "origin": route.origin, "destination": route.destination, "distanceKm": route.distanceKm, "estimatedDurationMin": route.estimatedDurationMin, "basePrice": route.basePrice} if route else None, "bus": {"id": bus.id, "licensePlate": bus.licensePlate, "busType": bus.busType.value if bus.busType else "", "totalSeats": bus.totalSeats, "status": bus.status.value if bus.status else ""} if bus else None, "seats": seats, "tickets": tickets, "estimatedRevenue": sum((ticket.price or 0) for ticket in trip.tickets if ticket.status not in active_statuses), "actualRevenue": sum((ticket.price or 0) for ticket in trip.tickets if ticket.status == TicketStatus.PAID)}
 
 @router.delete("/trips/{trip_id}")
 def delete_trip(trip_id: int, db: Session = Depends(get_db)):
@@ -207,6 +216,8 @@ def update_bus(bus_id: int, payload: UpdateBusRequest, db: Session = Depends(get
             setattr(bus, field, value)
     db.commit()
     db.refresh(bus)
+    if payload.totalSeats is not None:
+        AdminService.sync_bus_seats(bus.id, bus.totalSeats, db)
     return bus
 
 @router.put("/buses/{bus_id}/status", response_model=BusDetailResponse)

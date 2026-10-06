@@ -7,6 +7,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, X, MapPin, Clock, Bus, Users, Search, RefreshCw, Armchair, Bell, BellRing, CreditCard, MessageCircle, MessageSquare, Calendar, CheckCircle2, Activity } from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../components/ui/StatusBadge";
+import PageHeader from "../../components/ui/PageHeader";
+import { Button, IconButton } from "../../components/ui/Button";
+import KPICard from "../../components/ui/KPICard";
 import FeedbackInboxModal from "../../components/admin/FeedbackInboxModal";
 import {
   AdminBus,
@@ -272,93 +275,97 @@ export default function AdminTripsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0f2849] to-[#1e446c] p-6 border border-white/10 shadow-sm">
-          <div className="absolute inset-0 opacity-20">
-            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d="M0,50 Q25,30 50,50 T100,50 L100,100 L0,100 Z" fill="white" />
-            </svg>
-          </div>
-
-          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">Trip Management</p>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">Quản lý chuyến xe</h1>
-              <p className="text-blue-200/80 text-sm mt-2">Tạo và quản lý chuyến xe với tuyến đường linh hoạt</p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Pending notifications badge */}
-              {(pendingBookings.length > 0 || pendingPayments.length > 0) && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-semibold">
-                  <BellRing className="w-4 h-4 animate-pulse" />
-                  {pendingBookings.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <span className="inline-block w-2 h-2 rounded-full bg-amber-300" />
-                      {pendingBookings.length} booking mới
-                    </span>
-                  )}
-                  {pendingBookings.length > 0 && pendingPayments.length > 0 && (
-                    <span className="text-amber-400">·</span>
-                  )}
-                  {pendingPayments.length > 0 && (
-                    <span className="flex items-center gap-1">
-                      <CreditCard className="w-3 h-3" />
-                      {pendingPayments.length} SePay
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Feedback Inbox button */}
-              <button
-                onClick={() => {
-                  setFeedbackFilterTripId(null);
-                  setInitialFeedbackId(null);
-                  setShowFeedbackInbox(true);
-                }}
-                className="relative inline-flex items-center gap-2 px-5 py-3 bg-white/10 backdrop-blur-md text-white font-semibold rounded-2xl border border-white/20 hover:bg-white/20 transition-all"
-              >
-                <MessageSquare className="w-5 h-5" />
-                <span>Phản hồi</span>
-                {(feedbackStats?.newCount ?? 0) > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center shadow-lg animate-pulse">
-                    {feedbackStats!.newCount}
+      {/* 1. Header */}
+      <PageHeader
+        eyebrow="Trip Management"
+        title="Quản lý chuyến xe"
+        subtitle="Tạo và quản lý chuyến xe với tuyến đường linh hoạt"
+        actions={
+          <>
+            {(pendingBookings.length > 0 || pendingPayments.length > 0) && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-300 text-xs font-semibold">
+                <BellRing className="w-3.5 h-3.5 animate-pulse text-amber-400" />
+                {pendingBookings.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-300" />
+                    {pendingBookings.length} booking mới
                   </span>
                 )}
-              </button>
+                {pendingBookings.length > 0 && pendingPayments.length > 0 && (
+                  <span className="text-amber-400">·</span>
+                )}
+                {pendingPayments.length > 0 && (
+                  <span className="flex items-center gap-1 font-mono">
+                    <CreditCard className="w-3 h-3" />
+                    {pendingPayments.length} SePay
+                  </span>
+                )}
+              </div>
+            )}
 
-              <button
-                onClick={() => { setEditingTrip(null); setShowModal(true); }}
-                className="group relative inline-flex items-center gap-2 px-6 py-3 bg-white text-blue-600 font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <Plus className="w-5 h-5" />
-                <span>Tạo chuyến mới</span>
-              </button>
-            </div>
-          </div>
+            <Button
+              variant="secondary"
+              leftIcon={<MessageSquare className="w-4 h-4" />}
+              onClick={() => {
+                setFeedbackFilterTripId(null);
+                setInitialFeedbackId(null);
+                setShowFeedbackInbox(true);
+              }}
+              className="relative"
+            >
+              Phản hồi
+              {(feedbackStats?.newCount ?? 0) > 0 && (
+                <span className="ml-1.5 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold inline-flex items-center justify-center">
+                  {feedbackStats!.newCount}
+                </span>
+              )}
+            </Button>
 
-          {/* Stats */}
-          <div className="relative grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            {[
-              { label: "Tổng chuyến", value: trips.length, icon: Bus, color: "text-amber-400" },
-              { label: "Đang chạy", value: trips.filter(t => t.status === "RUNNING").length, icon: Activity, color: "text-emerald-400" },
-              { label: "Đã lên lịch", value: trips.filter(t => t.status === "SCHEDULED").length, icon: Calendar, color: "text-blue-400" },
-              { label: "Hoàn thành", value: trips.filter(t => t.status === "COMPLETED").length, icon: CheckCircle2, color: "text-slate-300" },
-            ].map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <div key={stat.label} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center border border-white/10">
-                  <div className="flex justify-center mb-1">
-                    <Icon className={`h-5 w-5 ${stat.color}`} />
-                  </div>
-                  <div className="text-xl font-bold text-white">{stat.value}</div>
-                  <div className="text-slate-300 text-xs">{stat.label}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+            <Button
+              variant="primary"
+              leftIcon={<Plus className="w-4 h-4" />}
+              onClick={() => {
+                setEditingTrip(null);
+                setShowModal(true);
+              }}
+            >
+              Tạo chuyến mới
+            </Button>
+          </>
+        }
+      />
+
+      {/* 2. KPI Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <KPICard
+          label="Tổng chuyến"
+          value={trips.length}
+          icon={Bus}
+          variant="amber"
+          description="Toàn bộ lịch trình"
+        />
+        <KPICard
+          label="Đang chạy"
+          value={trips.filter((t) => t.status === "RUNNING").length}
+          icon={Activity}
+          variant="emerald"
+          description="Chuyến xe trên đường"
+        />
+        <KPICard
+          label="Đã lên lịch"
+          value={trips.filter((t) => t.status === "SCHEDULED").length}
+          icon={Calendar}
+          variant="blue"
+          description="Chuẩn bị khởi hành"
+        />
+        <KPICard
+          label="Hoàn thành"
+          value={trips.filter((t) => t.status === "COMPLETED").length}
+          icon={CheckCircle2}
+          variant="slate"
+          description="Đã kết thúc hành trình"
+        />
+      </div>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-4 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
@@ -441,7 +448,7 @@ export default function AdminTripsPage() {
                   paginatedTrips.map((trip) => (
                     <tr key={trip.id} className="hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm">
+                        <span className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-[#1c2a42] border border-white/10 text-emerald-400 font-bold text-xs">
                           #{trip.id}
                         </span>
                       </td>
@@ -715,33 +722,41 @@ function TripModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-3xl shadow-2xl border border-white/10">
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm animate-[fadeIn_0.15s_ease-out]" onClick={onClose} />
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#172338] rounded-2xl shadow-2xl border border-white/[0.08] flex flex-col">
         {/* Modal Header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-t-3xl">
+        <div className="sticky top-0 z-10 bg-[#101c2d] border-b border-white/[0.08] p-5 rounded-t-2xl">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">
-                {initialData ? `Chỉnh sửa chuyến #${initialData.id}` : "Tạo chuyến mới"}
-              </h2>
-              <p className="text-blue-200 text-sm mt-1">
-                {initialData ? "Cập nhật thông tin chuyến xe" : "Thêm chuyến xe mới vào hệ thống"}
+              <p className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                {initialData ? "Cập nhật chuyến xe" : "Tạo chuyến mới"}
               </p>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-100 mt-0.5">
+                {initialData ? `Chỉnh sửa chuyến #${initialData.id}` : "Tạo chuyến xe mới"}
+              </h2>
             </div>
-            <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors">
+            <IconButton
+              variant="default"
+              size="md"
+              onClick={onClose}
+              tooltip="Đóng"
+              title="Đóng"
+            >
               <X className="w-5 h-5" />
-            </button>
+            </IconButton>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Route Toggle */}
-          <div className="flex gap-4 p-1 bg-white/10 rounded-xl">
+          <div className="flex gap-1.5 p-1 bg-[#101c2d] rounded-lg border border-white/[0.08]">
             <button
               type="button"
               onClick={() => setUseExistingRoute(true)}
-              className={`flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all ${
-                useExistingRoute ? "bg-white text-blue-600 shadow-lg" : "text-white/70 hover:text-white"
+              className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-all ${
+                useExistingRoute
+                  ? "bg-[#1c2a42] text-emerald-400 font-semibold border border-white/[0.08] shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
               }`}
             >
               Chọn tuyến có sẵn
@@ -749,8 +764,10 @@ function TripModal({
             <button
               type="button"
               onClick={() => setUseExistingRoute(false)}
-              className={`flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all ${
-                !useExistingRoute ? "bg-white text-blue-600 shadow-lg" : "text-white/70 hover:text-white"
+              className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-all ${
+                !useExistingRoute
+                  ? "bg-[#1c2a42] text-emerald-400 font-semibold border border-white/[0.08] shadow-sm"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]"
               }`}
             >
               Tạo tuyến mới
@@ -760,16 +777,16 @@ function TripModal({
           {/* Existing Route */}
           {useExistingRoute && (
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Tuyến đường <span className="text-red-400">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Tuyến đường <span className="text-rose-400">*</span>
               </label>
               <select
                 value={form.routeId || ""}
                 onChange={(e) => setForm({ ...form, routeId: Number(e.target.value) || undefined })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
               >
                 {routes.map((route) => (
-                  <option key={route.id} value={route.id} className="bg-slate-800 text-white">
+                  <option key={route.id} value={route.id} className="bg-[#101c2d] text-slate-200">
                     {route.origin} → {route.destination}
                   </option>
                 ))}
@@ -780,74 +797,74 @@ function TripModal({
           {/* New Route */}
           {!useExistingRoute && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Điểm đi <span className="text-red-400">*</span>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Điểm đi <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400 pointer-events-none" />
                     <select
                       value={form.origin}
                       onChange={(e) => setForm({ ...form, origin: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full h-10 pl-9 pr-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
                     >
-                      <option value="" className="bg-slate-800 text-white">-- Chọn điểm đi --</option>
+                      <option value="" className="bg-[#101c2d] text-slate-200">-- Chọn điểm đi --</option>
                       {LOCATIONS.filter(l => l !== form.destination).map((l) => (
-                        <option key={l} value={l} className="bg-slate-800 text-white">{l}</option>
+                        <option key={l} value={l} className="bg-[#101c2d] text-slate-200">{l}</option>
                       ))}
                     </select>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
-                    Điểm đến <span className="text-red-400">*</span>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Điểm đến <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rose-400 pointer-events-none" />
                     <select
                       value={form.destination}
                       onChange={(e) => setForm({ ...form, destination: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full h-10 pl-9 pr-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
                     >
-                      <option value="" className="bg-slate-800 text-white">-- Chọn điểm đến --</option>
+                      <option value="" className="bg-[#101c2d] text-slate-200">-- Chọn điểm đến --</option>
                       {LOCATIONS.filter(l => l !== form.origin).map((l) => (
-                        <option key={l} value={l} className="bg-slate-800 text-white">{l}</option>
+                        <option key={l} value={l} className="bg-[#101c2d] text-slate-200">{l}</option>
                       ))}
                     </select>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Giá vé (VND)</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Giá vé (VND)</label>
                   <input
                     type="number"
                     value={form.basePrice || ""}
                     onChange={(e) => setForm({ ...form, basePrice: Number(e.target.value) || undefined })}
                     placeholder="VD: 350000"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Khoảng cách (km)</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Khoảng cách (km)</label>
                   <input
                     type="number"
                     value={form.distanceKm || ""}
                     onChange={(e) => setForm({ ...form, distanceKm: Number(e.target.value) || undefined })}
                     placeholder="VD: 120"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">Thời gian (phút)</label>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Thời gian (phút)</label>
                   <input
                     type="number"
                     value={form.estimatedDurationMin || ""}
                     onChange={(e) => setForm({ ...form, estimatedDurationMin: Number(e.target.value) || undefined })}
                     placeholder="VD: 180"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
                   />
                 </div>
               </div>
@@ -855,99 +872,103 @@ function TripModal({
           )}
 
           {/* Bus & Status */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Xe <span className="text-red-400">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Xe vận hành <span className="text-rose-400">*</span>
               </label>
               <div className="relative">
-                <Bus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                <Bus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400 pointer-events-none" />
                 <select
                   value={form.busId || ""}
                   onChange={(e) => setForm({ ...form, busId: Number(e.target.value) })}
-                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  className="w-full h-10 pl-9 pr-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
                 >
-                  <option value="" className="bg-slate-800 text-white">-- Chọn xe --</option>
+                  <option value="" className="bg-[#101c2d] text-slate-200">-- Chọn xe --</option>
                   {buses.map((bus) => (
-                    <option key={bus.id} value={bus.id} className="bg-slate-800 text-white">
-                      {bus.licensePlate} - {bus.busType}
+                    <option key={bus.id} value={bus.id} className="bg-[#101c2d] text-slate-200">
+                      {bus.licensePlate} · {bus.busType} ({bus.totalSeats} ghế)
                     </option>
                   ))}
                 </select>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Trạng thái</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Trạng thái chuyến</label>
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
               >
-                <option value="SCHEDULED" className="bg-slate-800 text-white">Đã lên lịch</option>
-                <option value="RUNNING" className="bg-slate-800 text-white">Đang chạy</option>
-                <option value="COMPLETED" className="bg-slate-800 text-white">Hoàn thành</option>
-                <option value="CANCELLED" className="bg-slate-800 text-white">Đã hủy</option>
-                <option value="DELAYED" className="bg-slate-800 text-white">Trễ</option>
+                <option value="SCHEDULED" className="bg-[#101c2d] text-slate-200">Đã lên lịch (SCHEDULED)</option>
+                <option value="RUNNING" className="bg-[#101c2d] text-slate-200">Đang chạy (RUNNING)</option>
+                <option value="COMPLETED" className="bg-[#101c2d] text-slate-200">Hoàn thành (COMPLETED)</option>
+                <option value="CANCELLED" className="bg-[#101c2d] text-slate-200">Đã hủy (CANCELLED)</option>
+                <option value="DELAYED" className="bg-[#101c2d] text-slate-200">Trễ giờ (DELAYED)</option>
               </select>
             </div>
           </div>
 
           {/* Time */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Giờ khởi hành <span className="text-red-400">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Giờ khởi hành <span className="text-rose-400">*</span>
               </label>
               <input
                 type="datetime-local"
                 value={form.departureTime}
                 onChange={(e) => setForm({ ...form, departureTime: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">
-                Giờ đến <span className="text-red-400">*</span>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Giờ đến dự kiến <span className="text-rose-400">*</span>
               </label>
               <input
                 type="datetime-local"
                 value={form.arrivalTime}
                 onChange={(e) => setForm({ ...form, arrivalTime: e.target.value })}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
               />
             </div>
           </div>
 
-          {/* Staff */}
-          <div className="p-4 bg-white/5 rounded-xl border border-white/10">
-            <h3 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-              <Users className="w-4 h-4" />
+          {/* Staff Assignment */}
+          <div className="p-4 bg-[#101c2d] rounded-xl border border-white/[0.08] space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-400" />
               Phân công nhân sự
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Tài xế</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Tài xế (Lái xe)</label>
                 <select
                   value={form.driverId}
                   onChange={(e) => setForm({ ...form, driverId: e.target.value ? Number(e.target.value) : "" })}
-                  className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-10 px-3 bg-[#172338] border border-white/[0.08] rounded-lg text-slate-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 cursor-pointer"
                 >
-                  <option value="" className="bg-slate-800 text-white">-- Bỏ trống --</option>
+                  <option value="" className="bg-[#172338] text-slate-200">-- Bỏ trống (Phân công sau) --</option>
                   {drivers.map((d) => (
-                    <option key={d.id} value={d.id} className="bg-slate-800 text-white">{d.fullName} ({d.phone})</option>
+                    <option key={d.id} value={d.id} className="bg-[#172338] text-slate-200">
+                      {d.fullName} ({d.phone})
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Phụ xe</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">Phụ xe (Lơ xe)</label>
                 <select
                   value={form.assistantId}
                   onChange={(e) => setForm({ ...form, assistantId: e.target.value ? Number(e.target.value) : "" })}
-                  className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-10 px-3 bg-[#172338] border border-white/[0.08] rounded-lg text-slate-200 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 cursor-pointer"
                 >
-                  <option value="" className="bg-slate-800 text-white">-- Bỏ trống --</option>
+                  <option value="" className="bg-[#172338] text-slate-200">-- Bỏ trống (Phân công sau) --</option>
                   {assistants.map((a) => (
-                    <option key={a.id} value={a.id} className="bg-slate-800 text-white">{a.fullName} ({a.phone})</option>
+                    <option key={a.id} value={a.id} className="bg-[#172338] text-slate-200">
+                      {a.fullName} ({a.phone})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -955,21 +976,23 @@ function TripModal({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <button
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/[0.08]">
+            <Button
               type="button"
+              variant="secondary"
+              size="md"
               onClick={onClose}
-              className="flex-1 py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl transition-colors"
             >
               Hủy
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={isSaving}
-              className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg disabled:opacity-50 transition-all"
+              variant="primary"
+              size="md"
+              isLoading={isSaving}
             >
-              {isSaving ? "Đang lưu..." : initialData ? "Lưu thay đổi" : "Tạo chuyến"}
-            </button>
+              {isSaving ? "Đang lưu..." : initialData ? "Lưu thay đổi" : "Tạo chuyến mới"}
+            </Button>
           </div>
         </form>
       </div>

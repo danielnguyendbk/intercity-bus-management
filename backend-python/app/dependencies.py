@@ -55,4 +55,4 @@ def require_role(allowed_roles: list[str]):
     return role_checker
 
 require_admin = require_role(["ADMIN"])
-require_staff = require_role(["ADMIN", "STAFF", "DISPATCHER"])
+require_staff = require_role(["ADMIN"])

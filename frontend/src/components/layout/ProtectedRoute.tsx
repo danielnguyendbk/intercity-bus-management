@@ -31,8 +31,12 @@ export default function ProtectedRoute({
       return;
     }
 
-    if (path.startsWith("/dispatcher/") && user.role !== "DISPATCHER" && user.role !== "ADMIN") {
-      navigate("/auth/login", { replace: true });
+    if (path.startsWith("/dispatcher/")) {
+      if (user.role === "ADMIN") {
+        navigate("/admin/assignments", { replace: true });
+      } else {
+        navigate("/auth/login", { replace: true });
+      }
       return;
     }
 
@@ -44,7 +48,6 @@ export default function ProtectedRoute({
     if (allowedRoles && !allowedRoles.includes(user.role)) {
       const defaultPath: Record<string, string> = {
         ADMIN: "/admin/dashboard",
-        DISPATCHER: "/dispatcher/dashboard",
         CUSTOMER: "/customer/booking",
       };
       navigate(defaultPath[user.role] ?? "/auth/login", { replace: true });

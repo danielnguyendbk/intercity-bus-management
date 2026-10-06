@@ -36,33 +36,55 @@
   --color-info-bg: #eff6ff;
   --color-info-border: #bfdbfe;
 
-  /* Admin / Dark Slate Theme (Navy-branded, not cyber-purple) */
-  --admin-bg: #0b1329;
-  --admin-bg-soft: #0f1b3b;
-  --admin-bg-card: #15264f;
-  --admin-surface: #1a2f60;
-  --admin-surface-soft: #233d79;
-  --admin-border: rgba(255, 255, 255, 0.08);
-  --admin-border-strong: rgba(255, 255, 255, 0.18);
-  --admin-text: #f8fafc;
-  --admin-text-soft: #cbd5e1;
-  --admin-muted: #94a3b8;
-  --admin-muted-2: #64748b;
+  /* ==================== Admin / Enterprise SaaS Dark Theme Tokens ==================== */
+  --bg-app: #0b1220;
+  --bg-sidebar: #101c2d;
+  --surface-1: #172338;
+  --surface-2: #1c2a42;
+  --surface-hover: #202e48;
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --text-muted: rgba(255, 255, 255, 0.40);
+
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  /* Backward Compatibility Aliases */
+  --admin-bg: var(--bg-app);
+  --admin-bg-soft: var(--bg-sidebar);
+  --admin-bg-card: var(--surface-1);
+  --admin-surface: var(--surface-1);
+  --admin-surface-soft: var(--surface-2);
+  --admin-border: var(--border-default);
+  --admin-border-strong: var(--border-strong);
+  --admin-text: var(--text-primary);
+  --admin-text-soft: var(--text-secondary);
+  --admin-muted: var(--text-secondary);
+  --admin-muted-2: var(--text-muted);
+  --admin-primary: var(--primary);
+  --admin-primary-hover: var(--primary-hover);
 
   /* Layout & Geometry */
-  --sidebar-width: 256px;
-  --sidebar-width-collapsed: 72px;
-  --topbar-height: 64px;
+  --sidebar-width: 236px;
+  --sidebar-width-collapsed: 68px;
+  --topbar-height: 60px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
 
   /* Subtle Clean Shadows (No Neon/Glow) */
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
 }
 
 /* Typography Base */

@@ -27,6 +27,7 @@
 - [✨ Tính năng nổi bật](#-tính-năng-nổi-bật)
 - [🏗️ Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
 - [🚀 Cài đặt & Chạy nhanh](#-cài-đặt--chạy-nhanh)
+- [🔑 Tài khoản Demo](#-tài-khoản-demo-test-hệ-thống)
 - [🔐 Cấu hình môi trường](#-cấu-hình-môi-trường)
 
 ---
@@ -43,8 +44,7 @@
 ### 🎯 Đối tượng sử dụng
 
 - 🛒 **Khách hàng (CUSTOMER)**: Đăng nhập Google OAuth, tìm chuyến, chọn ghế, thanh toán online (SePay) hoặc COD.
-- 👨‍💼 **Quản trị viên (ADMIN)**: Quản lý chuyến, xe, tuyến, nhân sự, vé, dashboard realtime.
-- 🚚 **Điều phối viên (DISPATCHER)**: Dashboard điều phối chuyến sắp chạy.
+- 👨‍💼 **Quản trị viên (ADMIN)**: Quản lý chuyến, xe, tuyến, nhân sự & phân công điều phối, quản lý vé, dashboard realtime.
 
 ---
 
@@ -140,6 +140,19 @@ Chạy script `start-dev.ps1` để khởi động đồng thời cả frontend 
 ```powershell
 .\start-dev.ps1
 ```
+
+---
+
+## 🔑 Tài khoản Demo (Test hệ thống)
+
+| Vai trò | Tên đăng nhập (`username`) | Mật khẩu | Email | Quyền hạn chính |
+|---|---|---|---|---|
+| **ADMIN** | `admin` | `password` | `admin@bus.com` | Quản trị viên tối cao: Điều phối xe/chuyến, duyệt vé, xem doanh thu, quản trị người dùng. |
+| **ADMIN** | `dispatcher` | `password` | `dispatcher@example.com` | Điều phối viên chuyến xe. |
+| **CUSTOMER** | `customer` | `password` | `customer@example.com` | Khách hàng: Tìm chuyến, đặt vé, chọn vị trí ghế, thanh toán qua SePay. |
+| **CUSTOMER** | `demo` | `password` | `demo@example.com` | Tài khoản khách hàng phụ. |
+
+> 📌 **Lưu ý:** Khi đăng nhập tại giao diện Frontend (`/login`), hãy bấm chọn tab vai trò tương ứng (**Khách hàng** hoặc **Quản trị viên**) trước khi bấm nút Đăng nhập.
 
 ---
 
