@@ -25,6 +25,10 @@ import {
   ChevronLeft,
   AlertCircle,
   Tag,
+  Bus,
+  Navigation,
+  Phone,
+  ShieldCheck,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -797,6 +801,115 @@ export default function FeedbackInboxModal({
                       </div>
                     </div>
                   </section>
+
+                  {/* Section: Thông tin Chuyến xe & Nhân sự liên quan */}
+                  {selectedDetail.tripInfo && (
+                    <section className="space-y-3 pt-2 border-t border-white/[0.08]">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-[13px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                          <Bus className="h-4 w-4" />
+                          <span>Thông tin chuyến xe & Nhân sự liên quan</span>
+                        </h4>
+                        <span className="text-[11px] text-slate-400 font-mono bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">
+                          Mã chuyến #{selectedDetail.tripInfo.id}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Box 1: Lộ trình & Phương tiện */}
+                        <div className="rounded-xl bg-[#101c2d] border border-white/[0.08] p-3.5 space-y-2.5">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                            <Navigation className="h-3.5 w-3.5 text-blue-400" />
+                            <span>Hành trình:</span>
+                            <span className="text-slate-100 font-bold">
+                              {selectedDetail.tripInfo.origin} → {selectedDetail.tripInfo.destination}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-white/[0.04]">
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Khởi hành</p>
+                              <p className="text-slate-200 font-medium mt-0.5">
+                                {fmtTime(selectedDetail.tripInfo.departureTime)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Dự kiến đến</p>
+                              <p className="text-slate-200 font-medium mt-0.5">
+                                {fmtTime(selectedDetail.tripInfo.arrivalTime)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-white/[0.04] flex items-center justify-between text-xs">
+                            <span className="text-slate-400">Phương tiện:</span>
+                            <div className="flex items-center gap-1.5 font-semibold">
+                              <span className="text-amber-300 font-mono bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                                {selectedDetail.tripInfo.busLicensePlate || "Chưa gán biển số"}
+                              </span>
+                              {selectedDetail.tripInfo.busType && (
+                                <span className="text-slate-300">
+                                  ({selectedDetail.tripInfo.busType})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Box 2: Đội ngũ Tài xế & Phụ xe */}
+                        <div className="rounded-xl bg-[#101c2d] border border-white/[0.08] p-3.5 space-y-2.5">
+                          <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                            <span>Nhân sự phụ trách chuyến</span>
+                          </div>
+
+                          {/* Tài xế */}
+                          <div className="space-y-1 pt-1 border-t border-white/[0.04]">
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                              Tài xế lái xe:
+                            </p>
+                            {selectedDetail.tripInfo.drivers && selectedDetail.tripInfo.drivers.length > 0 ? (
+                              selectedDetail.tripInfo.drivers.map((d) => (
+                                <div key={d.id} className="flex items-center justify-between text-xs text-slate-200">
+                                  <span className="font-semibold text-slate-100">{d.fullName}</span>
+                                  {d.phone && (
+                                    <span className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                                      <Phone className="h-3 w-3 text-slate-500" />
+                                      {d.phone}
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-xs text-slate-500 italic">Chưa phân công tài xế</p>
+                            )}
+                          </div>
+
+                          {/* Phụ xe */}
+                          <div className="space-y-1 pt-1 border-t border-white/[0.04]">
+                            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+                              Phụ xe / Tiếp viên:
+                            </p>
+                            {selectedDetail.tripInfo.assistants && selectedDetail.tripInfo.assistants.length > 0 ? (
+                              selectedDetail.tripInfo.assistants.map((a) => (
+                                <div key={a.id} className="flex items-center justify-between text-xs text-slate-200">
+                                  <span className="font-semibold text-slate-100">{a.fullName}</span>
+                                  {a.phone && (
+                                    <span className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
+                                      <Phone className="h-3 w-3 text-slate-500" />
+                                      {a.phone}
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-xs text-slate-500 italic">Chưa phân công phụ xe</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  )}
 
                   {/* Section 3: Lịch sử trao đổi / Phản hồi */}
                   <section className="space-y-3 pt-2 border-t border-white/[0.08]">

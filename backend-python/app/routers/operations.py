@@ -229,24 +229,65 @@ def get_feedback_stats(db: Session = Depends(get_db)):
         "averageRating": sum(ratings) / len(ratings) if ratings else None,
     }
 
-def _feedback_response(feedback: Feedback) -> dict:
+def _feedback_response(feedback: Feedback, db: Optional[Session] = None) -> dict:
     user = feedback.user
     replies = [
         {"id": reply.id, "authorRole": reply.authorRole.value, "content": reply.content, "createdAt": reply.createdAt}
         for reply in feedback.replies
     ]
+
+    trip_info = None
+    related_trip_label = None
+
+    if feedback.relatedTripId and db:
+        trip = db.query(Trip).filter(Trip.id == feedback.relatedTripId).first()
+        if trip:
+            route_str = f"{trip.route.origin} - {trip.route.destination}" if trip.route else "Chuyến xe"
+            bus_type_str = trip.bus.busType.value if (trip.bus and hasattr(trip.bus.busType, "value")) else (trip.bus.busType if trip.bus else "")
+            bus_plate = trip.bus.licensePlate if trip.bus else ""
+            
+            drivers = []
+            assistants = []
+            for a in trip.assignments:
+                if a.employee:
+                    emp_info = {
+                        "id": a.employee.id,
+                        "fullName": a.employee.fullName,
+                        "phone": a.employee.phone or "",
+                    }
+                    if a.assignmentRole == AssignmentRole.DRIVER:
+                        drivers.append(emp_info)
+                    elif a.assignmentRole == AssignmentRole.ASSISTANT:
+                        assistants.append(emp_info)
+
+            related_trip_label = f"#{trip.id} · {route_str}"
+            trip_info = {
+                "id": trip.id,
+                "routeName": route_str,
+                "origin": trip.route.origin if trip.route else "",
+                "destination": trip.route.destination if trip.route else "",
+                "departureTime": trip.departureTime.isoformat() if trip.departureTime else None,
+                "arrivalTime": trip.arrivalTime.isoformat() if trip.arrivalTime else None,
+                "busLicensePlate": bus_plate,
+                "busType": bus_type_str,
+                "busLabel": f"{bus_plate} ({bus_type_str})" if bus_plate else "",
+                "drivers": drivers,
+                "assistants": assistants,
+            }
+
     return {
         "id": feedback.id,
         "userId": feedback.user_id,
         "username": user.username if user else "",
-        "userFullName": user.passengers[0].fullName if user and user.passengers else "",
+        "userFullName": user.passengers[0].fullName if user and user.passengers else (user.username if user else ""),
         "userEmail": user.email if user else "",
         "category": feedback.category.value,
         "categoryLabel": feedback.category.value,
         "subject": feedback.subject,
         "content": feedback.content,
         "relatedTripId": feedback.relatedTripId,
-        "relatedTripLabel": None,
+        "relatedTripLabel": related_trip_label,
+        "tripInfo": trip_info,
         "rating": feedback.rating,
         "status": feedback.status.value,
         "statusLabel": feedback.status.value,
@@ -271,14 +312,14 @@ def get_admin_feedbacks(status: Optional[str] = None, category: Optional[str] = 
     if keyword and keyword.strip():
         needle = keyword.strip().lower()
         feedbacks = [f for f in feedbacks if needle in f.subject.lower() or needle in f.content.lower()]
-    return [_feedback_response(feedback) for feedback in feedbacks]
+    return [_feedback_response(feedback, db) for feedback in feedbacks]
 
 @router.get("/api/admin/feedbacks/{feedback_id}", dependencies=[Depends(require_staff)])
 def get_admin_feedback(feedback_id: int, db: Session = Depends(get_db)):
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id, Feedback.deletedAt.is_(None)).first()
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback not found")
-    return _feedback_response(feedback)
+    return _feedback_response(feedback, db)
 
 @router.post("/api/admin/feedbacks/{feedback_id}/reply", dependencies=[Depends(require_staff)])
 def reply_as_admin(feedback_id: int, payload: ReplyFeedbackRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -289,7 +330,7 @@ def reply_as_admin(feedback_id: int, payload: ReplyFeedbackRequest, current_user
     feedback.status = FeedbackStatus.IN_PROGRESS
     db.commit()
     db.refresh(feedback)
-    return _feedback_response(feedback)
+    return _feedback_response(feedback, db)
 
 @router.patch("/api/admin/feedbacks/{feedback_id}/status", dependencies=[Depends(require_staff)])
 def update_feedback_status(feedback_id: int, payload: Dict[str, Any], db: Session = Depends(get_db)):
@@ -308,7 +349,7 @@ def update_feedback_status(feedback_id: int, payload: Dict[str, Any], db: Sessio
             raise HTTPException(status_code=400, detail="Invalid feedback priority")
     db.commit()
     db.refresh(feedback)
-    return _feedback_response(feedback)
+    return _feedback_response(feedback, db)
 
 @router.delete("/api/admin/feedbacks/{feedback_id}", dependencies=[Depends(require_staff)])
 def delete_admin_feedback(feedback_id: int, db: Session = Depends(get_db)):

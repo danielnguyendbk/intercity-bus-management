@@ -45,6 +45,26 @@ export interface FeedbackReply {
   createdAt: string;
 }
 
+export interface TripStaffInfo {
+  id: number;
+  fullName: string;
+  phone: string;
+}
+
+export interface TripFeedbackInfo {
+  id: number;
+  routeName: string;
+  origin: string;
+  destination: string;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  busLicensePlate: string;
+  busType: string;
+  busLabel: string;
+  drivers: TripStaffInfo[];
+  assistants: TripStaffInfo[];
+}
+
 export interface FeedbackItem {
   id: number;
   userId: number;
@@ -57,6 +77,7 @@ export interface FeedbackItem {
   content: string;
   relatedTripId: number | null;
   relatedTripLabel: string | null;
+  tripInfo?: TripFeedbackInfo | null;
   rating: number | null;
   status: FeedbackStatus;
   statusLabel: string;

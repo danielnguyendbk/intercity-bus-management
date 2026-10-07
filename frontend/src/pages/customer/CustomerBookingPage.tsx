@@ -278,7 +278,7 @@ export default function CustomerBookingPage() {
       setStep("success");
       toast.success("Đặt vé thành công! Quý khách sẽ thanh toán tiền mặt khi lên xe.");
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? "Đặt vé thất bại, vui lòng thử lại";
+      const msg = err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message ?? "Đặt vé thất bại, vui lòng thử lại";
       toast.error(msg);
     } finally {
       setConfirming(false);

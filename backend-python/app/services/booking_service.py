@@ -227,9 +227,13 @@ class BookingService:
     @staticmethod
     def get_my_tickets(current_user: User, db: Session) -> List[TicketResponse]:
         passenger = db.query(Passenger).filter(Passenger.user_id == current_user.id).first()
-        if not passenger:
-            return []
-        tickets = db.query(Ticket).filter(Ticket.passenger_id == passenger.id).order_by(Ticket.id.desc()).all()
+        passenger_id = passenger.id if passenger else -1
+        tickets = db.query(Ticket).filter(
+            or_(
+                Ticket.booked_by == current_user.id,
+                Ticket.passenger_id == passenger_id
+            )
+        ).order_by(Ticket.id.desc()).all()
         return [BookingService._to_ticket_response(t) for t in tickets]
 
     @staticmethod
@@ -238,7 +242,8 @@ class BookingService:
         if not ticket:
             raise HTTPException(status_code=404, detail="Ticket not found")
 
-        if not ticket.passenger or ticket.passenger.user_id != current_user.id:
+        is_owner = (ticket.booked_by == current_user.id) or (ticket.passenger and ticket.passenger.user_id == current_user.id)
+        if not is_owner:
             raise HTTPException(status_code=403, detail="Bạn không có quyền hủy vé này")
 
         if ticket.status == TicketStatus.CANCELLED:
