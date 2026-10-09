@@ -7,7 +7,7 @@ from decimal import Decimal
 from app.core.database import get_db
 from app.dependencies import require_staff, get_current_user
 from app.models.user import User, Passenger
-from app.models.bus import Trip, Bus
+from app.models.bus import Trip, Bus, TripStatus
 from app.models.operations import (
     Employee, Cargo, Maintenance, Feedback, FeedbackReply, TripAssignment,
     CargoStatus, EmployeeType, EmployeeStatus, AssignmentRole, MaintenanceStatus,
@@ -143,6 +143,22 @@ def get_available_employees(from_: str = Query("", alias="from"), to: str = "", 
             query = query.filter(Employee.employeeType == EmployeeType[role.upper()])
         except KeyError:
             raise HTTPException(status_code=400, detail="Invalid employee type")
+
+    # Loại bỏ các nhân sự đang có lịch chạy trùng thời gian
+    if from_ and to:
+        try:
+            dep_dt = datetime.fromisoformat(from_)
+            arr_dt = datetime.fromisoformat(to)
+            busy_ids = [row[0] for row in db.query(TripAssignment.employeeId).join(Trip, TripAssignment.tripId == Trip.id).filter(
+                Trip.status != TripStatus.CANCELLED,
+                Trip.departureTime < arr_dt,
+                Trip.arrivalTime > dep_dt
+            ).all()]
+            if busy_ids:
+                query = query.filter(~Employee.id.in_(busy_ids))
+        except (ValueError, TypeError):
+            pass
+
     return query.all()
 
 @router.post("/api/admin/employees", dependencies=[Depends(require_staff)])
@@ -193,17 +209,74 @@ def delete_employee(emp_id: int, db: Session = Depends(get_db)):
 # ── Admin Trip Assignments Endpoints ──
 @router.post("/api/admin/trip-assignments/{trip_id}", dependencies=[Depends(require_staff)])
 def assign_staff(trip_id: int, payload: Dict[str, Optional[int]], db: Session = Depends(get_db)):
-    db.query(TripAssignment).filter(TripAssignment.tripId == trip_id).delete()
-    db.commit()
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Không tìm thấy chuyến xe")
+
     driver_id = payload.get("driverId")
     assistant_id = payload.get("assistantId")
 
+    if driver_id and assistant_id and driver_id == assistant_id:
+        raise HTTPException(status_code=400, detail="Tài xế và phụ xe không thể là cùng một người")
+
+    if driver_id:
+        driver = db.query(Employee).filter(Employee.id == driver_id).first()
+        if not driver:
+            raise HTTPException(status_code=404, detail="Không tìm thấy tài xế được chọn")
+        if driver.status != EmployeeStatus.ACTIVE:
+            raise HTTPException(status_code=400, detail=f"Tài xế '{driver.fullName}' không ở trạng thái sẵn sàng làm việc")
+
+        # Ràng buộc trùng lịch tài xế
+        if trip.departureTime and trip.arrivalTime:
+            conflict = db.query(TripAssignment).join(Trip, TripAssignment.tripId == Trip.id).filter(
+                TripAssignment.employeeId == driver_id,
+                Trip.id != trip_id,
+                Trip.status != TripStatus.CANCELLED,
+                Trip.departureTime < trip.arrivalTime,
+                Trip.arrivalTime > trip.departureTime
+            ).first()
+            if conflict and conflict.trip:
+                c_trip = conflict.trip
+                dep_str = c_trip.departureTime.strftime("%d/%m/%Y %H:%M") if c_trip.departureTime else ""
+                arr_str = c_trip.arrivalTime.strftime("%d/%m/%Y %H:%M") if c_trip.arrivalTime else ""
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Tài xế '{driver.fullName}' đã có lịch chạy cho chuyến #{c_trip.id} ({dep_str} - {arr_str}). Vui lòng chọn tài xế khác!"
+                )
+
+    if assistant_id:
+        assistant = db.query(Employee).filter(Employee.id == assistant_id).first()
+        if not assistant:
+            raise HTTPException(status_code=404, detail="Không tìm thấy phụ xe được chọn")
+        if assistant.status != EmployeeStatus.ACTIVE:
+            raise HTTPException(status_code=400, detail=f"Phụ xe '{assistant.fullName}' không ở trạng thái sẵn sàng làm việc")
+
+        # Ràng buộc trùng lịch phụ xe
+        if trip.departureTime and trip.arrivalTime:
+            conflict = db.query(TripAssignment).join(Trip, TripAssignment.tripId == Trip.id).filter(
+                TripAssignment.employeeId == assistant_id,
+                Trip.id != trip_id,
+                Trip.status != TripStatus.CANCELLED,
+                Trip.departureTime < trip.arrivalTime,
+                Trip.arrivalTime > trip.departureTime
+            ).first()
+            if conflict and conflict.trip:
+                c_trip = conflict.trip
+                dep_str = c_trip.departureTime.strftime("%d/%m/%Y %H:%M") if c_trip.departureTime else ""
+                arr_str = c_trip.arrivalTime.strftime("%d/%m/%Y %H:%M") if c_trip.arrivalTime else ""
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Phụ xe '{assistant.fullName}' đã có lịch chạy cho chuyến #{c_trip.id} ({dep_str} - {arr_str}). Vui lòng chọn phụ xe khác!"
+                )
+
+    db.query(TripAssignment).filter(TripAssignment.tripId == trip_id).delete()
     if driver_id:
         db.add(TripAssignment(tripId=trip_id, employeeId=driver_id, assignmentRole=AssignmentRole.DRIVER))
     if assistant_id:
         db.add(TripAssignment(tripId=trip_id, employeeId=assistant_id, assignmentRole=AssignmentRole.ASSISTANT))
     db.commit()
     return "Phân công nhân sự thành công!"
+
 
 @router.get("/api/admin/trip-assignments/{trip_id}", dependencies=[Depends(require_staff)])
 def get_trip_assignments(trip_id: int, db: Session = Depends(get_db)):

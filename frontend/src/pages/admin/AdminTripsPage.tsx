@@ -231,9 +231,9 @@ export default function AdminTripsPage() {
       } else {
         payload.origin = form.origin;
         payload.destination = form.destination;
-        if (form.basePrice) payload.basePrice = form.basePrice;
-        if (form.distanceKm) payload.distanceKm = form.distanceKm;
-        if (form.estimatedDurationMin) payload.estimatedDurationMin = form.estimatedDurationMin;
+        payload.basePrice = form.basePrice || 250000;
+        payload.distanceKm = form.distanceKm || 100;
+        payload.estimatedDurationMin = form.estimatedDurationMin || 120;
       }
 
       if (editingTrip) {
@@ -671,10 +671,11 @@ function TripModal({
   assistants: Employee[];
   initialData: any;
 }) {
-  const [useExistingRoute, setUseExistingRoute] = useState(!!initialData?.routeId);
+  const isExistingDefault = initialData ? !!initialData?.routeId : (routes.length > 0);
+  const [useExistingRoute, setUseExistingRoute] = useState(isExistingDefault);
 
   const [form, setForm] = useState<TripFormValues>({
-    useExistingRoute: useExistingRoute,
+    useExistingRoute: isExistingDefault,
     routeId: initialData?.routeId || routes[0]?.id || undefined,
     origin: initialData?.routeName?.split(" -> ")[0] || "",
     destination: initialData?.routeName?.split(" -> ")[1] || "",
@@ -690,8 +691,10 @@ function TripModal({
   });
 
   useEffect(() => {
+    const isExist = initialData ? !!initialData?.routeId : (routes.length > 0);
+    setUseExistingRoute(isExist);
     setForm({
-      useExistingRoute: useExistingRoute,
+      useExistingRoute: isExist,
       routeId: initialData?.routeId || routes[0]?.id || undefined,
       origin: initialData?.routeName?.split(" -> ")[0] || "",
       destination: initialData?.routeName?.split(" -> ")[1] || "",
@@ -709,16 +712,47 @@ function TripModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.departureTime || !form.arrivalTime || !form.busId) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+    if (useExistingRoute && !form.routeId) {
+      toast.error("Vui lòng chọn tuyến đường có sẵn");
       return;
     }
-    if (!useExistingRoute && (!form.origin || !form.destination)) {
-      toast.error("Vui lòng nhập điểm đi và điểm đến");
+    if (!useExistingRoute) {
+      if (!form.origin) {
+        toast.error("Vui lòng chọn điểm đi");
+        return;
+      }
+      if (!form.destination) {
+        toast.error("Vui lòng chọn điểm đến");
+        return;
+      }
+      if (form.origin.trim().toLowerCase() === form.destination.trim().toLowerCase()) {
+        toast.error("Điểm đi và điểm đến không được trùng nhau");
+        return;
+      }
+    }
+    if (!form.busId) {
+      toast.error("Vui lòng chọn xe vận hành");
       return;
     }
-    onSubmit(form);
+    if (!form.departureTime) {
+      toast.error("Vui lòng chọn giờ khởi hành");
+      return;
+    }
+    if (!form.arrivalTime) {
+      toast.error("Vui lòng chọn giờ đến dự kiến");
+      return;
+    }
+    if (new Date(form.departureTime) >= new Date(form.arrivalTime)) {
+      toast.error("Giờ đến dự kiến phải sau giờ khởi hành");
+      return;
+    }
+    if (form.driverId && form.assistantId && form.driverId === form.assistantId) {
+      toast.error("Tài xế và phụ xe không thể là cùng một người");
+      return;
+    }
+    onSubmit({ ...form, useExistingRoute });
   };
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -752,7 +786,10 @@ function TripModal({
           <div className="flex gap-1.5 p-1 bg-[#101c2d] rounded-lg border border-white/[0.08]">
             <button
               type="button"
-              onClick={() => setUseExistingRoute(true)}
+              onClick={() => {
+                setUseExistingRoute(true);
+                setForm((prev) => ({ ...prev, useExistingRoute: true }));
+              }}
               className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-all ${
                 useExistingRoute
                   ? "bg-[#1c2a42] text-emerald-400 font-semibold border border-white/[0.08] shadow-sm"
@@ -763,7 +800,10 @@ function TripModal({
             </button>
             <button
               type="button"
-              onClick={() => setUseExistingRoute(false)}
+              onClick={() => {
+                setUseExistingRoute(false);
+                setForm((prev) => ({ ...prev, useExistingRoute: false }));
+              }}
               className={`flex-1 py-1.5 px-3 rounded-md font-medium text-xs transition-all ${
                 !useExistingRoute
                   ? "bg-[#1c2a42] text-emerald-400 font-semibold border border-white/[0.08] shadow-sm"

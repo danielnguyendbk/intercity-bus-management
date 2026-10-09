@@ -27,6 +27,8 @@ import {
   Shield,
   Calendar,
   Search,
+  Compass,
+  Navigation,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Link, useNavigate } from "react-router-dom";
@@ -35,6 +37,7 @@ import { useAuthStore } from "../../stores/authStore";
 import BookingHero from "../../components/customer/BookingHero";
 import SePayCheckout from "../../components/customer/SePayCheckout";
 import Pagination from "../../components/ui/Pagination";
+import PickupMapModal from "../../components/map/PickupMapModal";
 import {
   searchTrips,
   getAllUpcomingTrips,
@@ -103,6 +106,7 @@ export default function CustomerBookingPage() {
   const [pickupPoint, setPickupPoint] = useState<PickupPoint | null>(null);
   const [dropoffCity, setDropoffCity] = useState("");
   const [dropoffPoint, setDropoffPoint] = useState<PickupPoint | null>(null);
+  const [mapModalType, setMapModalType] = useState<"pickup" | "dropoff" | null>(null);
 
   // Passenger & Payment Info
   const [passengerName, setPassengerName] = useState(user?.fullName || "");
@@ -754,9 +758,19 @@ export default function CustomerBookingPage() {
 
                 {/* Pickup selection */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Điểm đón tại {normalizeCityName(selectedTrip.origin)}
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Điểm đón tại {normalizeCityName(selectedTrip.origin)}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setMapModalType("pickup")}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0f2849] bg-amber-50 hover:bg-amber-100 border border-amber-300 text-slate-800 px-2 py-0.5 rounded-md transition shadow-2xs group"
+                    >
+                      <Compass className="w-3.5 h-3.5 text-amber-600 group-hover:rotate-45 transition-transform" />
+                      <span>🗺️ Bản đồ & Định vị</span>
+                    </button>
+                  </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {originPoints.map((point) => {
                       const isSelected = pickupPoint?.name === point.name;
@@ -782,9 +796,19 @@ export default function CustomerBookingPage() {
 
                 {/* Dropoff selection */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Điểm trả tại {normalizeCityName(selectedTrip.destination)}
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Điểm trả tại {normalizeCityName(selectedTrip.destination)}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setMapModalType("dropoff")}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0f2849] bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-0.5 rounded-md transition shadow-2xs group"
+                    >
+                      <Compass className="w-3.5 h-3.5 text-slate-600 group-hover:rotate-45 transition-transform" />
+                      <span>🗺️ Xem trên bản đồ</span>
+                    </button>
+                  </div>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {destPoints.map((point) => {
                       const isSelected = dropoffPoint?.name === point.name;
@@ -1161,6 +1185,34 @@ export default function CustomerBookingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* INTERACTIVE PICKUP / DROPOFF MAP MODAL WITH GPS */}
+      {selectedTrip && (
+        <PickupMapModal
+          isOpen={mapModalType !== null}
+          onClose={() => setMapModalType(null)}
+          title={mapModalType === "pickup" ? "Bản đồ điểm đón xe & Vị trí của bạn" : "Bản đồ điểm trả khách"}
+          cityName={
+            mapModalType === "pickup"
+              ? normalizeCityName(selectedTrip.origin)
+              : normalizeCityName(selectedTrip.destination)
+          }
+          cityData={
+            mapModalType === "pickup"
+              ? getCityData(selectedTrip.origin)
+              : getCityData(selectedTrip.destination)
+          }
+          points={mapModalType === "pickup" ? originPoints : destPoints}
+          selectedPoint={mapModalType === "pickup" ? pickupPoint : dropoffPoint}
+          onSelectPoint={(point) => {
+            if (mapModalType === "pickup") {
+              setPickupPoint(point);
+            } else {
+              setDropoffPoint(point);
+            }
+          }}
+        />
       )}
     </div>
   );

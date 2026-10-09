@@ -158,8 +158,7 @@ export default function AdminBusesPage() {
             onClick={() => setShowCreateModal(true)}
             className="shadow-sm"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm xe mới
+            + Thêm xe mới
           </Button>
         }
       />
@@ -479,11 +478,10 @@ function BusModal({
                     key={preset}
                     type="button"
                     onClick={() => setForm({ ...form, totalSeats: preset })}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors border ${
-                      form.totalSeats === preset
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors border ${form.totalSeats === preset
                         ? "bg-emerald-600 text-white border-emerald-500/40 font-semibold shadow-sm"
                         : "bg-[#1c2a42] text-slate-300 border-white/[0.08] hover:bg-[#202e48]"
-                    }`}
+                      }`}
                   >
                     {preset} ghế
                   </button>

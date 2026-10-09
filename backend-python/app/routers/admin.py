@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Request, HTTPException, status
 from datetime import datetime
+from decimal import Decimal
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
@@ -19,6 +20,47 @@ from app.services.admin_service import AdminService
 from app.services.sse_service import event_generator
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"], dependencies=[Depends(require_staff)])
+
+def validate_trip_schedule(bus_id: int, dep_time: datetime, arr_time: datetime, exclude_trip_id: Optional[int], db: Session):
+    if dep_time >= arr_time:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Giờ đến dự kiến ({arr_time.strftime('%H:%M %d/%m/%Y')}) phải sau giờ khởi hành ({dep_time.strftime('%H:%M %d/%m/%Y')})"
+        )
+
+    bus = db.query(Bus).filter(Bus.id == bus_id).first()
+    if not bus:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy xe được chỉ định"
+        )
+
+    if bus.status == BusStatus.MAINTENANCE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Xe {bus.licensePlate} đang trong trạng thái bảo trì, không thể xếp lịch chuyến mới"
+        )
+
+    # Ràng buộc trùng lịch xe: dep_time < other.arrivalTime AND arr_time > other.departureTime
+    conflict_query = db.query(Trip).filter(
+        Trip.bus_id == bus_id,
+        Trip.status != TripStatus.CANCELLED,
+        Trip.departureTime < arr_time,
+        Trip.arrivalTime > dep_time
+    )
+    if exclude_trip_id:
+        conflict_query = conflict_query.filter(Trip.id != exclude_trip_id)
+
+    conflict = conflict_query.first()
+    if conflict:
+        dep_str = conflict.departureTime.strftime("%d/%m/%Y %H:%M") if conflict.departureTime else ""
+        arr_str = conflict.arrivalTime.strftime("%d/%m/%Y %H:%M") if conflict.arrivalTime else ""
+        route_name = f"{conflict.route.origin} - {conflict.route.destination}" if conflict.route else f"Tuyến #{conflict.route_id}"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Trùng lịch xe: Xe {bus.licensePlate} đã có lịch chạy cho chuyến #{conflict.id} ({route_name}) từ {dep_str} đến {arr_str}. Vui lòng chọn xe khác hoặc đổi khung giờ!"
+        )
+
 
 def _trip_response(trip: Trip) -> dict:
     route = trip.route
@@ -68,16 +110,69 @@ def get_trips(date: str | None = None, routeId: int | None = None, status: str |
 
 @router.post("/trips", status_code=status.HTTP_201_CREATED)
 def create_trip(payload: Dict[str, Any], db: Session = Depends(get_db)):
+    bus_id = payload.get("busId")
+    if not bus_id:
+        raise HTTPException(status_code=400, detail="Vui lòng chọn xe vận hành")
+
+    try:
+        dep_time = datetime.fromisoformat(str(payload["departureTime"]))
+        arr_time = datetime.fromisoformat(str(payload["arrivalTime"]))
+    except (KeyError, ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Thời gian khởi hành hoặc đến dự kiến không hợp lệ")
+
+    # Kiểm tra ràng buộc thời gian & không trùng lịch xe
+    validate_trip_schedule(int(bus_id), dep_time, arr_time, exclude_trip_id=None, db=db)
+
     route_id = payload.get("routeId")
-    if not route_id:
-        required = ("origin", "destination", "basePrice", "distanceKm", "estimatedDurationMin")
-        if any(payload.get(key) is None for key in required):
-            raise HTTPException(status_code=400, detail="routeId or complete inline route data is required")
-        route = Route(origin=payload["origin"], destination=payload["destination"], basePrice=payload["basePrice"], distanceKm=payload["distanceKm"], estimatedDurationMin=payload["estimatedDurationMin"])
-        db.add(route)
-        db.flush()
-        route_id = route.id
-    trip = Trip(route_id=route_id, bus_id=payload.get("busId"), departureTime=datetime.fromisoformat(payload["departureTime"]), arrivalTime=datetime.fromisoformat(payload["arrivalTime"]), status=TripStatus[payload.get("status", "SCHEDULED").upper()])
+    if route_id:
+        route = db.query(Route).filter(Route.id == route_id).first()
+        if not route:
+            raise HTTPException(status_code=404, detail="Không tìm thấy tuyến đường đã chọn")
+    else:
+        origin = (payload.get("origin") or "").strip()
+        destination = (payload.get("destination") or "").strip()
+        if not origin or not destination:
+            raise HTTPException(status_code=400, detail="Vui lòng chọn tuyến đường có sẵn hoặc nhập điểm đi và điểm đến")
+        if origin.lower() == destination.lower():
+            raise HTTPException(status_code=400, detail="Điểm đi và điểm đến không được trùng nhau")
+
+        base_price = Decimal(str(payload.get("basePrice") or 250000))
+        distance_km = int(payload.get("distanceKm") or 100)
+        est_min = int(payload.get("estimatedDurationMin") or max(int((arr_time - dep_time).total_seconds() / 60), 60))
+
+        # Tái sử dụng tuyến nếu đã có sẵn
+        existing_route = db.query(Route).filter(
+            Route.origin.ilike(origin),
+            Route.destination.ilike(destination),
+            Route.isActive == True
+        ).first()
+        if existing_route:
+            route_id = existing_route.id
+        else:
+            route = Route(
+                origin=origin,
+                destination=destination,
+                basePrice=base_price,
+                distanceKm=distance_km,
+                estimatedDurationMin=est_min
+            )
+            db.add(route)
+            db.flush()
+            route_id = route.id
+
+    trip_status_val = str(payload.get("status", "SCHEDULED")).upper()
+    try:
+        trip_status = TripStatus[trip_status_val]
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Trạng thái chuyến không hợp lệ")
+
+    trip = Trip(
+        route_id=route_id,
+        bus_id=int(bus_id),
+        departureTime=dep_time,
+        arrivalTime=arr_time,
+        status=trip_status
+    )
     db.add(trip)
     db.commit()
     db.refresh(trip)
@@ -88,21 +183,49 @@ def update_trip(trip_id: int, payload: Dict[str, Any], db: Session = Depends(get
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    for field, column in (("routeId", "route_id"), ("busId", "bus_id")):
-        if field in payload:
-            setattr(trip, column, payload[field])
-    if payload.get("departureTime"):
-        trip.departureTime = datetime.fromisoformat(payload["departureTime"])
-    if payload.get("arrivalTime"):
-        trip.arrivalTime = datetime.fromisoformat(payload["arrivalTime"])
+
+    new_bus_id = payload.get("busId", trip.bus_id)
+    if "departureTime" in payload and payload["departureTime"]:
+        try:
+            new_dep = datetime.fromisoformat(str(payload["departureTime"]))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Thời gian khởi hành không hợp lệ")
+    else:
+        new_dep = trip.departureTime
+
+    if "arrivalTime" in payload and payload["arrivalTime"]:
+        try:
+            new_arr = datetime.fromisoformat(str(payload["arrivalTime"]))
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Thời gian đến dự kiến không hợp lệ")
+    else:
+        new_arr = trip.arrivalTime
+
+    # Kiểm tra ràng buộc lịch trình nếu thay đổi thời gian hoặc xe
+    if new_dep and new_arr and new_bus_id:
+        validate_trip_schedule(int(new_bus_id), new_dep, new_arr, exclude_trip_id=trip_id, db=db)
+
+    if "routeId" in payload and payload["routeId"]:
+        route = db.query(Route).filter(Route.id == payload["routeId"]).first()
+        if not route:
+            raise HTTPException(status_code=404, detail="Không tìm thấy tuyến đường đã chọn")
+        trip.route_id = payload["routeId"]
+
+    if new_bus_id:
+        trip.bus_id = int(new_bus_id)
+    trip.departureTime = new_dep
+    trip.arrivalTime = new_arr
+
     if payload.get("status"):
         try:
-            trip.status = TripStatus[payload["status"].upper()]
+            trip.status = TripStatus[str(payload["status"]).upper()]
         except KeyError:
-            raise HTTPException(status_code=400, detail="Invalid trip status")
+            raise HTTPException(status_code=400, detail="Trạng thái chuyến không hợp lệ")
+
     db.commit()
     db.refresh(trip)
     return _trip_response(trip)
+
 
 @router.get("/trips/{trip_id}")
 def get_trip_detail(trip_id: int, db: Session = Depends(get_db)):

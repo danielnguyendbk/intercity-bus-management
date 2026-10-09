@@ -8,16 +8,18 @@
 //   - QR thanh toán VietQR
 // ============================================================================
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { MessageCircle, X, Ticket, ArrowRight, ArrowLeft, Printer, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { MessageCircle, X, Ticket, ArrowRight, ArrowLeft, Printer, AlertCircle, CheckCircle2, Clock, Compass } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { getMyTickets, cancelTicket, TicketRecord } from "../../api/customer";
 import { getMyFeedbacks } from "../../api/feedback";
 import FeedbackModal from "../../components/feedback/FeedbackModal";
 import Pagination from "../../components/ui/Pagination";
 import SePayCheckout from "../../components/customer/SePayCheckout";
+import PickupMapModal from "../../components/map/PickupMapModal";
+import { getCityData, normalizeCityName, PickupPoint } from "../../utils/locations";
 import { formatPrice } from "../../utils/format";
 
 // ─── Status & payment config ──────────────────────────────────────────
@@ -109,6 +111,28 @@ function InvoiceModal({
   const isPayable = ticket.status === "BOOKED" || ticket.status === "HOLD";
   const isCancelling = cancellingId === ticket.id;
 
+  const [showMapModal, setShowMapModal] = useState<"pickup" | "dropoff" | null>(null);
+
+  const pickupCityData = getCityData(ticket.origin || "");
+  const dropoffCityData = getCityData(ticket.destination || "");
+
+  const activeCityData = showMapModal === "pickup" ? pickupCityData : dropoffCityData;
+  const activeCityName = showMapModal === "pickup"
+    ? normalizeCityName(ticket.origin || "")
+    : normalizeCityName(ticket.destination || "");
+  const activePoints = activeCityData?.pickupPoints || [];
+
+  const currentSelectedPoint: PickupPoint | null = useMemo(() => {
+    if (!showMapModal || !activePoints.length) return null;
+    const targetText = showMapModal === "pickup" ? ticket.pickupPoint : ticket.dropoffPoint;
+    if (!targetText) return activePoints[0] || null;
+    return (
+      activePoints.find((p) => targetText.includes(p.name) || p.name.includes(targetText)) ||
+      activePoints[0] ||
+      null
+    );
+  }, [showMapModal, activePoints, ticket.pickupPoint, ticket.dropoffPoint]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
@@ -187,17 +211,37 @@ function InvoiceModal({
 
           {/* Pickup & Dropoff */}
           {(ticket.pickupPoint || ticket.dropoffPoint) && (
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1.5 text-xs">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2 text-xs">
               {ticket.pickupPoint && (
-                <div className="flex items-start gap-2">
-                  <span className="font-semibold text-slate-700 shrink-0">Điểm đón:</span>
-                  <span className="text-slate-600">{ticket.pickupPoint}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <span className="font-semibold text-slate-700 shrink-0">Điểm đón:</span>
+                    <span className="text-slate-600">{ticket.pickupPoint}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapModal("pickup")}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0f2849] hover:text-blue-700 shrink-0 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-2xs hover:bg-slate-100 transition"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Xem bản đồ</span>
+                  </button>
                 </div>
               )}
               {ticket.dropoffPoint && (
-                <div className="flex items-start gap-2">
-                  <span className="font-semibold text-slate-700 shrink-0">Điểm trả:</span>
-                  <span className="text-slate-600">{ticket.dropoffPoint}</span>
+                <div className="flex items-start justify-between gap-2 pt-1.5 border-t border-slate-200/60">
+                  <div className="flex items-start gap-2">
+                    <span className="font-semibold text-slate-700 shrink-0">Điểm trả:</span>
+                    <span className="text-slate-600">{ticket.dropoffPoint}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMapModal("dropoff")}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0f2849] hover:text-blue-700 shrink-0 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-2xs hover:bg-slate-100 transition"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Xem bản đồ</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -274,6 +318,20 @@ function InvoiceModal({
           </div>
         </div>
       </div>
+
+      {/* Interactive Map Modal for Customer */}
+      {showMapModal && (
+        <PickupMapModal
+          isOpen={true}
+          onClose={() => setShowMapModal(null)}
+          title={showMapModal === "pickup" ? "Vị trí điểm đón của vé" : "Vị trí điểm trả của vé"}
+          cityName={activeCityName}
+          cityData={activeCityData}
+          points={activePoints}
+          selectedPoint={currentSelectedPoint}
+          onSelectPoint={() => {}}
+        />
+      )}
     </div>
   );
 }
