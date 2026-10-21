@@ -53,7 +53,7 @@ export default function LoginPage() {
       toast.error("Không nhận được token từ Google");
       return;
     }
-    
+
     try {
       const user = await useAuthStore.getState().googleLogin(credentialResponse.credential, role);
       const nextPath = roleRedirect[user.role] ?? "/admin/dashboard";

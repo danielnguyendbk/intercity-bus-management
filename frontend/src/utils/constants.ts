@@ -19,7 +19,11 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   CUSTOMER: "Khách hàng",
 };
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const rawApiUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || "/api";
+export const API_BASE_URL =
+  rawApiUrl.endsWith("/api") || rawApiUrl.endsWith("/api/")
+    ? rawApiUrl
+    : `${rawApiUrl.replace(/\/+$/, "")}/api`;
 
 export function formatStatusLabel(status: string) {
   switch (status) {
