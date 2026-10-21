@@ -95,8 +95,10 @@ class UserService:
                 if res.status_code != 200:
                     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Google ID Token")
                 payload = res.json()
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Failed to verify Google ID Token")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Failed to verify Google ID Token: {str(e)}")
 
         email = payload.get("email")
         name = payload.get("name")

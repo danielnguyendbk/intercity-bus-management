@@ -8,6 +8,7 @@ class UserDto(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
     phone: Optional[str] = None
+    status: Optional[str] = None
 
 class AuthResponse(BaseModel):
     token: str
