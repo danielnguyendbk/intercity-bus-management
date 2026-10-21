@@ -1,5 +1,6 @@
 import os
 import sys
+sys.stdout.reconfigure(encoding="utf-8")
 import argparse
 from pathlib import Path
 from sqlalchemy import create_engine, text
