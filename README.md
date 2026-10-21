@@ -27,6 +27,7 @@
 - [✨ Tính năng nổi bật](#-tính-năng-nổi-bật)
 - [🏗️ Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
 - [🚀 Cài đặt & Chạy nhanh](#-cài-đặt--chạy-nhanh)
+- [🌐 Chia sẻ ra Internet (Cloudflare Tunnel)](#6-chia-sẻ-ra-internet-để-người-khác-truy-cập-cloudflare-tunnel)
 - [🔑 Tài khoản Demo](#-tài-khoản-demo-test-hệ-thống)
 - [🔐 Cấu hình môi trường](#-cấu-hình-môi-trường)
 
@@ -136,10 +137,17 @@ docker-compose up -d
 ```
 
 ### 5. Lệnh chạy nhanh (Windows)
-Chạy script `start-dev.ps1` để khởi động đồng thời cả frontend và backend (FastAPI).
+Chạy script `start-dev.ps1` để khởi động đồng thời cả frontend và backend (FastAPI):
 ```powershell
 .\start-dev.ps1
 ```
+
+### 6. Chia sẻ ra Internet để người khác truy cập (Cloudflare Tunnel)
+Để người khác ở bất kỳ đâu hoặc trên điện thoại có thể truy cập vào website của bạn qua đường link HTTPS (hỗ trợ test định vị GPS chọn trạm xe và webhook SePay):
+```powershell
+.\start-cloudflare.ps1
+```
+*Script sẽ tự động kiểm tra backend, frontend và tạo đường link công khai `https://xxxx.trycloudflare.com`.*
 
 ---
 
@@ -173,3 +181,12 @@ SEPAY_WEBHOOK_TOKEN=your_webhook_api_key
 ```
 
 Xem cấu hình và luồng xác nhận thanh toán tại [backend-python/SEPAY.md](backend-python/SEPAY.md).
+
+---
+
+## 🚀 Triển khai lên Cloud (Render.com)
+
+Xem tài liệu hướng dẫn từng bước chi tiết tại: **[RENDER_DEPLOY_GUIDE.md](RENDER_DEPLOY_GUIDE.md)**
+- Hỗ trợ triển khai cả Frontend (Static Site), Backend (Web Service) và Database (TiDB Cloud MySQL Serverless).
+- Tích hợp sẵn cấu hình 1-click **Render Blueprint** (`render.yaml`).
+- Tự động nạp dữ liệu mẫu từ `data_dump.sql` qua script `backend-python/import_db.py`.

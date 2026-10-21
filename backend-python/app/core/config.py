@@ -4,12 +4,13 @@ from typing import List
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / '.env', override=True)
+load_dotenv(Path(__file__).resolve().parents[2] / '.env', override=False)
 
 class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", 8080))
     
     # Database
+    DATABASE_URL_ENV: str = os.getenv("DATABASE_URL", "")
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: int = int(os.getenv("DB_PORT", 3306))
     DB_NAME: str = os.getenv("DB_NAME", "bus_management_db")
@@ -18,6 +19,14 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URL(self) -> str:
+        if self.DATABASE_URL_ENV:
+            url = self.DATABASE_URL_ENV.strip()
+            if url.startswith("mysql://"):
+                url = url.replace("mysql://", "mysql+pymysql://", 1)
+            if "charset=" not in url:
+                separator = "&" if "?" in url else "?"
+                url = f"{url}{separator}charset=utf8mb4"
+            return url
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
         
     # JWT
@@ -28,7 +37,7 @@ class Settings(BaseSettings):
     # CORS
     APP_CORS_ALLOWED_ORIGINS: str = os.getenv(
         "APP_CORS_ALLOWED_ORIGINS", 
-        "http://localhost:3000,http://localhost:4173,http://localhost:4174,http://localhost:4175,http://localhost:5173,https://*.trycloudflare.com,https://*.ngrok-free.dev,https://*.ngrok.app,https://*.loca.lt"
+        "http://localhost:3000,http://localhost:4173,http://localhost:4174,http://localhost:4175,http://localhost:5173,https://*.trycloudflare.com,https://*.ngrok-free.dev,https://*.ngrok.app,https://*.loca.lt,https://*.onrender.com"
     )
 
     @property

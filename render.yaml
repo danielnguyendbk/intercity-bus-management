@@ -1,0 +1,50 @@
+services:
+  # ==============================================================================
+  # 1. Backend Web Service (Python FastAPI)
+  # ==============================================================================
+  - type: web
+    name: xe-khach-backend
+    runtime: python
+    rootDir: backend-python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Nhập chuỗi kết nối MySQL (ví dụ TiDB Serverless / Aiven)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRATION_MS
+        value: 86400000
+      - key: APP_CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: SEPAY_API_KEY
+        sync: false
+      - key: SEPAY_BANK_CODE
+        sync: false
+      - key: SEPAY_ACCOUNT_NUMBER
+        sync: false
+      - key: SEPAY_ACCOUNT_NAME
+        sync: false
+      - key: SEPAY_WEBHOOK_TOKEN
+        sync: false
+
+  # ==============================================================================
+  # 2. Frontend Static Site (React + Vite + TailwindCSS)
+  # ==============================================================================
+  - type: static
+    name: xe-khach-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false # Nhập URL Backend: https://<xe-khach-backend>.onrender.com/api
