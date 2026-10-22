@@ -220,17 +220,6 @@ export default function AdminDashboardPage() {
 
           <button
             type="button"
-            onClick={handleSyncDatabase}
-            disabled={isSyncing}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
-            title="Đồng bộ toàn bộ 22 xe, 10 tuyến, 17 chuyến và 16.6tr doanh thu từ data_dump.sql"
-          >
-            <Database className={`h-3.5 w-3.5 ${isSyncing ? "animate-pulse" : ""}`} />
-            <span>{isSyncing ? "Đang nạp..." : "Nạp dữ liệu mới"}</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => {
               fetchData(true);
               setRefreshKey((k) => k + 1);

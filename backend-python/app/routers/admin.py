@@ -314,12 +314,29 @@ def delete_trip(trip_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Trip deleted successfully"}
 
+def _auto_sync_database_if_needed(db: Session):
+    try:
+        route_cnt = db.query(Route).count()
+        bus_cnt = db.query(Bus).count()
+        if route_cnt < 10 or bus_cnt < 22:
+            import logging
+            logging.getLogger(__name__).info("Auto-syncing database to latest dataset on demand...")
+            from import_db import import_sql_dump
+            from app.core.database import engine
+            import_sql_dump(engine_instance=engine)
+            db.expire_all()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Auto-sync error: {e}")
+
 @router.get("/dashboard", response_model=AdminDashboardResponse)
 def get_dashboard(db: Session = Depends(get_db)):
+    _auto_sync_database_if_needed(db)
     return AdminService.get_dashboard(db)
 
 @router.get("/revenue", response_model=RevenueStatsResponse)
 def get_revenue(db: Session = Depends(get_db)):
+    _auto_sync_database_if_needed(db)
     return AdminService.get_revenue_stats(db)
 
 @router.get("/users", response_model=List[UserListResponse])
