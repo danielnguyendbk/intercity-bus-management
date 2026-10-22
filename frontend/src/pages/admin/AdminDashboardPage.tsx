@@ -15,12 +15,12 @@ import {
   RotateCw,
   ArrowRight,
   CheckCircle2,
+  Database,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAdminDashboard, AdminDashboardData } from "../../api/admin";
+import { getAdminDashboard, AdminDashboardData, syncAdminDatabase, connectAdminNotifications } from "../../api/admin";
 import { extractApiErrorMessage } from "../../utils/apiError";
 import AdminRevenueStats from "./AdminRevenueStats";
-import { connectAdminNotifications } from "../../api/admin";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Quản trị viên",
@@ -43,8 +43,26 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleSyncDatabase = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn nạp bộ dữ liệu đầy đủ mới nhất (22 xe, 10 tuyến đường, 17 chuyến xe và 16.6 triệu doanh thu) vào cơ sở dữ liệu không?")) {
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const res = await syncAdminDatabase();
+      toast.success(res.message || "Đồng bộ dữ liệu thành công!");
+      fetchData(true);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(extractApiErrorMessage(err) || "Không thể đồng bộ cơ sở dữ liệu");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const fetchData = (isSilent = false) => {
     if (!isSilent) setIsLoading(true);
@@ -187,6 +205,17 @@ export default function AdminDashboardPage() {
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>Vận hành ổn định</span>
           </div>
+
+          <button
+            type="button"
+            onClick={handleSyncDatabase}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50"
+            title="Đồng bộ toàn bộ 22 xe, 10 tuyến, 17 chuyến và 16.6tr doanh thu từ data_dump.sql"
+          >
+            <Database className={`h-3.5 w-3.5 ${isSyncing ? "animate-pulse" : ""}`} />
+            <span>{isSyncing ? "Đang nạp..." : "Nạp dữ liệu mới"}</span>
+          </button>
 
           <button
             type="button"

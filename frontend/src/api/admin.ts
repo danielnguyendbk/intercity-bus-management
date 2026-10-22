@@ -41,6 +41,11 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   return res.data;
 }
 
+export async function syncAdminDatabase(): Promise<{ success: boolean; message: string }> {
+  const res = await apiClient.post<{ success: boolean; message: string }>("/admin/sync-database");
+  return res.data;
+}
+
 // ==================== USER MANAGEMENT ====================
 
 export interface AdminUser {

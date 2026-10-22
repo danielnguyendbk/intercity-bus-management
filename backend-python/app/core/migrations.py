@@ -84,14 +84,14 @@ def ensure_database_schema(target_engine=None):
             except Exception as e:
                 logger.warning(f"Note: route 6 price sync: {e}")
 
-        # 4. Tự động nạp dữ liệu từ data_dump.sql nếu database hoàn toàn trống (ví dụ khi mới tạo trên Cloud/Render)
-        if "buses" in table_names and "users" in table_names:
+        # 4. Tự động nạp dữ liệu từ data_dump.sql nếu database chưa có dữ liệu mới (ví dụ khi mới tạo trên Cloud/Render hoặc đang ở bản cũ)
+        if "buses" in table_names and "routes" in table_names:
             try:
                 with db_engine.connect() as conn:
                     bus_cnt = conn.execute(text("SELECT COUNT(*) FROM buses")).scalar() or 0
-                    user_cnt = conn.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
-                if bus_cnt == 0 and user_cnt == 0:
-                    logger.info("Database is empty (0 buses, 0 users). Auto-seeding from data_dump.sql...")
+                    route_cnt = conn.execute(text("SELECT COUNT(*) FROM routes")).scalar() or 0
+                if bus_cnt < 22 or route_cnt < 10:
+                    logger.info(f"Database needs data upgrade (buses={bus_cnt}, routes={route_cnt}). Auto-seeding from data_dump.sql...")
                     import sys
                     from pathlib import Path
                     backend_dir = Path(__file__).resolve().parents[2]

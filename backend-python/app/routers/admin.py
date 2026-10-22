@@ -512,3 +512,14 @@ async def notifications_stream(request: Request):
             "X-Accel-Buffering": "no"
         }
     )
+
+@router.post("/sync-database")
+def sync_database(db: Session = Depends(get_db)):
+    """Đồng bộ cơ sở dữ liệu từ data_dump.sql lên Cloud."""
+    try:
+        from import_db import import_sql_dump
+        from app.core.database import engine
+        import_sql_dump(engine_instance=engine)
+        return {"success": True, "message": "Đã đồng bộ cơ sở dữ liệu thành công từ data_dump.sql"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi đồng bộ cơ sở dữ liệu: {str(e)}")
