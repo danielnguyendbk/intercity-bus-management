@@ -88,6 +88,15 @@ export default function AdminDashboardPage() {
     fetchData();
   }, []);
 
+  // Định kỳ tự động làm mới số liệu nền mỗi 30s (đảm bảo dashboard luôn cập nhật liên tục)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+      setRefreshKey((k) => k + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Kết nối SSE để nhận thông báo real-time khi có vé mới, thanh toán SePay hoặc góp ý
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +125,9 @@ export default function AdminDashboardPage() {
           `📬 Phản hồi mới từ ${feedback.userFullName || feedback.username}: "${feedback.subject}"`,
           { duration: 6000 }
         );
+      },
+      (err) => {
+        console.debug("[SSE] Dashboard notifications reconnecting...", err);
       }
     );
 

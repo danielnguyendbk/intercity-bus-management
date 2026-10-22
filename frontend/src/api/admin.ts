@@ -4,6 +4,7 @@
 
 import apiClient from "./apiClient";
 import { AdminTicket, Employee, UserRole } from "../types";
+import { API_BASE_URL } from "../utils/constants";
 
 // ==================== DASHBOARD ====================
 
@@ -532,9 +533,10 @@ export function connectAdminNotifications(
   // /api/admin/** yêu cầu ROLE_ADMIN — nên ta truyền token qua query param.
   // Backend sẽ đọc token từ query string (xem SecurityConfig filter).
   const token = localStorage.getItem("token");
+  const streamBase = `${API_BASE_URL.replace(/\/+$/, "")}/admin/notifications/stream`;
   const url = token
-    ? `/api/admin/notifications/stream?access_token=${encodeURIComponent(token)}`
-    : "/api/admin/notifications/stream";
+    ? `${streamBase}?access_token=${encodeURIComponent(token)}`
+    : streamBase;
 
   const es = new EventSource(url);
 
