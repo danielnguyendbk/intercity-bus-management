@@ -67,18 +67,17 @@ const STEP_LABELS: Record<Step, string> = {
   success: "4. Trạng thái đặt vé",
 };
 
-const fmtTime = (dt: string) =>
-  new Date(dt).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+const fmtTime = (dt?: string | null) => {
+  if (!dt) return "--:--";
+  const d = new Date(dt);
+  return isNaN(d.getTime()) ? "--:--" : d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+};
 
-const fmtDate = (dt: string) =>
-  new Date(dt).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+const fmtDate = (dt?: string | null) => {
+  if (!dt) return "--/--/----";
+  const d = new Date(dt);
+  return isNaN(d.getTime()) ? "--/--/----" : d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
 
 const fmtPrice = (p: number | string | null | undefined) => formatPrice(p);
 
@@ -146,8 +145,9 @@ export default function CustomerBookingPage() {
     setLoadingTrips(true);
     try {
       const data = await getAllUpcomingTrips();
-      setTrips(data);
-    } catch {
+      setTrips(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      console.warn("Could not load trips:", err);
       toast.error("Không thể tải danh sách chuyến xe");
     } finally {
       setLoadingTrips(false);
@@ -166,7 +166,7 @@ export default function CustomerBookingPage() {
 
   // Handlers
   const handleSearch = async () => {
-    if (origin && destination && origin === destination) {
+    if (origin && destination && origin.trim().toLowerCase() === destination.trim().toLowerCase()) {
       toast.error("Điểm đi và điểm đến không được trùng nhau");
       return;
     }
@@ -174,7 +174,7 @@ export default function CustomerBookingPage() {
     setCurrentPage(1);
     try {
       const data = await searchTrips({ origin, destination, date });
-      setTrips(data);
+      setTrips(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Không tìm được chuyến, vui lòng thử lại");
     } finally {
@@ -569,14 +569,34 @@ export default function CustomerBookingPage() {
                 Đang tìm kiếm chuyến xe phù hợp...
               </div>
             ) : filteredTrips.length === 0 ? (
-              <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500">
-                Không tìm thấy chuyến xe nào phù hợp với yêu cầu tìm kiếm.
+              <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500 space-y-3">
+                <p>Không tìm thấy chuyến xe nào phù hợp với yêu cầu tìm kiếm.</p>
+                {(origin || destination || date || onlyAvailable) && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOrigin("");
+                        setDestination("");
+                        setDate("");
+                        setOnlyAvailable(false);
+                        loadTrips();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition"
+                    >
+                      Xem tất cả chuyến xe khả dụng
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <>
                 <div className="grid gap-3">
                   {paginatedTrips.map((trip) => {
-                    const isSoldOut = trip.availableSeats === 0;
+                    const totalSeats = trip.totalSeats || 0;
+                    const availableSeats = trip.availableSeats ?? 0;
+                    const isSoldOut = availableSeats <= 0;
+                    const occupancyRatio = totalSeats > 0 ? Math.min(100, Math.max(0, ((totalSeats - availableSeats) / totalSeats) * 100)) : 0;
                     return (
                       <div
                         key={trip.id}
@@ -615,16 +635,11 @@ export default function CustomerBookingPage() {
                                 <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
                                   <div
                                     className="h-full bg-emerald-500 rounded-full"
-                                    style={{
-                                      width: `${Math.min(
-                                        100,
-                                        ((trip.totalSeats - trip.availableSeats) / trip.totalSeats) * 100
-                                      )}%`,
-                                    }}
+                                    style={{ width: `${occupancyRatio}%` }}
                                   />
                                 </div>
                                 <span className="text-emerald-700 font-medium">
-                                  Còn <strong>{trip.availableSeats}</strong>/{trip.totalSeats} vé khả dụng
+                                  Còn <strong>{availableSeats}</strong>/{totalSeats} vé khả dụng
                                 </span>
                               </>
                             )}

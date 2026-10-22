@@ -15,19 +15,29 @@ from app.services.sse_service import broker
 
 router = APIRouter(tags=["Trips & Bookings"])
 
+def _parse_query_date(raw_date: Optional[str]) -> Optional[date]:
+    if not raw_date or not str(raw_date).strip():
+        return None
+    val = str(raw_date).strip()[:10]
+    try:
+        from datetime import datetime
+        return datetime.strptime(val, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
 # Public endpoints
 @router.get("/api/public/trips", response_model=List[TripSearchResponse])
-def get_upcoming_trips(date: Optional[date] = None, db: Session = Depends(get_db)):
-    return BookingService.get_upcoming_trips(db, date)
+def get_upcoming_trips(date: Optional[str] = None, db: Session = Depends(get_db)):
+    return BookingService.get_upcoming_trips(db, _parse_query_date(date))
 
 @router.get("/api/public/trips/search", response_model=List[TripSearchResponse])
 def search_trips(
     origin: Optional[str] = None,
     destination: Optional[str] = None,
-    date: Optional[date] = None,
+    date: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    return BookingService.search_trips(db, origin, destination, date)
+    return BookingService.search_trips(db, origin, destination, _parse_query_date(date))
 
 @router.get("/api/public/trips/{trip_id}/seats", response_model=List[SeatStatusResponse])
 def get_trip_seats(trip_id: int, db: Session = Depends(get_db)):

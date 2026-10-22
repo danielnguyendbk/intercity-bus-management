@@ -34,6 +34,7 @@ import TripSeatsModal from "./TripSeatsModal";
 import Pagination from "../../components/ui/Pagination";
 import { Employee, TripStatus } from "../../types";
 import { extractApiErrorMessage } from "../../utils/apiError";
+import { formatPrice } from "../../utils/format";
 
 const LOCATIONS = [
   "Hà Nội", "TP.HCM", "Đà Nẵng", "Cần Thơ", "Huế",
@@ -224,6 +225,7 @@ export default function AdminTripsPage() {
         departureTime: form.departureTime,
         arrivalTime: form.arrivalTime,
         status: form.status,
+        basePrice: form.basePrice,
       };
 
       if (form.useExistingRoute && form.routeId) {
@@ -231,7 +233,6 @@ export default function AdminTripsPage() {
       } else {
         payload.origin = form.origin;
         payload.destination = form.destination;
-        payload.basePrice = form.basePrice || 250000;
         payload.distanceKm = form.distanceKm || 100;
         payload.estimatedDurationMin = form.estimatedDurationMin || 120;
       }
@@ -244,11 +245,16 @@ export default function AdminTripsPage() {
       }
 
       if (currentTripId) {
-        await assignStaffToTrip(
-          currentTripId,
-          form.driverId ? Number(form.driverId) : null,
-          form.assistantId ? Number(form.assistantId) : null
-        );
+        try {
+          await assignStaffToTrip(
+            currentTripId,
+            form.driverId ? Number(form.driverId) : null,
+            form.assistantId ? Number(form.assistantId) : null
+          );
+        } catch (staffErr) {
+          console.warn("Could not update staff assignment:", staffErr);
+          toast.error(`Đã lưu chuyến xe, nhưng phân công nhân sự bị lỗi: ${extractApiErrorMessage(staffErr)}`);
+        }
       }
 
       toast.success(editingTrip ? "Cập nhật chuyến thành công" : "Tạo chuyến mới thành công");
@@ -419,6 +425,7 @@ export default function AdminTripsPage() {
                 <tr className="bg-white/10 border-b border-white/20">
                   <th className="px-6 py-4 text-xs font-semibold text-slate-300 uppercase tracking-wider">Chuyến</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-300 uppercase tracking-wider">Tuyến đường</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-300 uppercase tracking-wider">Giá vé</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-300 uppercase tracking-wider">Xe</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-300 uppercase tracking-wider">Khởi hành</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-300 uppercase tracking-wider">Đến</th>
@@ -431,7 +438,7 @@ export default function AdminTripsPage() {
               <tbody className="divide-y divide-white/10">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-16 text-center">
+                    <td colSpan={10} className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
                         <span className="text-slate-400">Đang tải dữ liệu...</span>
@@ -440,7 +447,7 @@ export default function AdminTripsPage() {
                   </tr>
                 ) : paginatedTrips.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-16 text-center text-slate-400">
+                    <td colSpan={10} className="px-6 py-16 text-center text-slate-400">
                       Không tìm thấy chuyến nào phù hợp
                     </td>
                   </tr>
@@ -457,6 +464,11 @@ export default function AdminTripsPage() {
                           <MapPin className="w-4 h-4 text-emerald-400" />
                           <span className="text-white font-medium">{trip.routeName}</span>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-emerald-400 font-bold text-sm">
+                          {formatPrice(trip.basePrice)}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -550,20 +562,29 @@ export default function AdminTripsPage() {
                             onClick={async () => {
                               try {
                                 const assignments = await getStaffByTrip(trip.id);
-                                const driver = assignments.find((a: any) => a.assignmentRole === "DRIVER");
-                                const assistant = assignments.find((a: any) => a.assignmentRole === "ASSISTANT");
+                                const driver = (assignments || []).find((a: any) => (a.assignmentRole ?? a.role) === "DRIVER");
+                                const assistant = (assignments || []).find((a: any) => (a.assignmentRole ?? a.role) === "ASSISTANT");
+                                const tripDriver = trip.assignments?.find((a: any) => (a.assignmentRole ?? a.role) === "DRIVER");
+                                const tripAssistant = trip.assignments?.find((a: any) => (a.assignmentRole ?? a.role) === "ASSISTANT");
                                 setEditingTrip({
                                   ...trip,
-                                  driverId: driver?.employeeId || "",
-                                  assistantId: assistant?.employeeId || "",
+                                  driverId: driver?.employeeId ?? tripDriver?.employeeId ?? "",
+                                  assistantId: assistant?.employeeId ?? tripAssistant?.employeeId ?? "",
                                 });
                                 setShowModal(true);
                               } catch {
-                                setEditingTrip(trip);
+                                const tripDriver = trip.assignments?.find((a: any) => (a.assignmentRole ?? a.role) === "DRIVER");
+                                const tripAssistant = trip.assignments?.find((a: any) => (a.assignmentRole ?? a.role) === "ASSISTANT");
+                                setEditingTrip({
+                                  ...trip,
+                                  driverId: tripDriver?.employeeId ?? "",
+                                  assistantId: tripAssistant?.employeeId ?? "",
+                                });
                                 setShowModal(true);
                               }
                             }}
                             className="p-2 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-xl transition-all"
+                            title="Chỉnh sửa thông tin chuyến"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -674,12 +695,49 @@ function TripModal({
   const isExistingDefault = initialData ? !!initialData?.routeId : (routes.length > 0);
   const [useExistingRoute, setUseExistingRoute] = useState(isExistingDefault);
 
+  const resolveInitialRoute = () => {
+    if (initialData?.routeId) return initialData.routeId;
+    if (routes.length > 0) return routes[0].id;
+    return undefined;
+  };
+
+  const resolveInitialPrice = (rId?: number) => {
+    if (initialData?.basePrice != null && initialData.basePrice > 0) return initialData.basePrice;
+    if (rId) {
+      const r = routes.find((item) => item.id === rId);
+      if (r?.basePrice != null && r.basePrice > 0) return r.basePrice;
+    }
+    return 250000;
+  };
+
+  const resolveInitialOrigin = () => {
+    if (initialData?.origin) return initialData.origin;
+    if (initialData?.routeName) {
+      if (initialData.routeName.includes(" - ")) return initialData.routeName.split(" - ")[0].trim();
+      if (initialData.routeName.includes(" -> ")) return initialData.routeName.split(" -> ")[0].trim();
+      if (initialData.routeName.includes(" → ")) return initialData.routeName.split(" → ")[0].trim();
+    }
+    return "";
+  };
+
+  const resolveInitialDest = () => {
+    if (initialData?.destination) return initialData.destination;
+    if (initialData?.routeName) {
+      if (initialData.routeName.includes(" - ")) return initialData.routeName.split(" - ")[1].trim();
+      if (initialData.routeName.includes(" -> ")) return initialData.routeName.split(" -> ")[1].trim();
+      if (initialData.routeName.includes(" → ")) return initialData.routeName.split(" → ")[1].trim();
+    }
+    return "";
+  };
+
+  const initRouteId = resolveInitialRoute();
+
   const [form, setForm] = useState<TripFormValues>({
     useExistingRoute: isExistingDefault,
-    routeId: initialData?.routeId || routes[0]?.id || undefined,
-    origin: initialData?.routeName?.split(" -> ")[0] || "",
-    destination: initialData?.routeName?.split(" -> ")[1] || "",
-    basePrice: initialData?.basePrice || undefined,
+    routeId: initRouteId,
+    origin: resolveInitialOrigin(),
+    destination: resolveInitialDest(),
+    basePrice: resolveInitialPrice(initRouteId),
     distanceKm: initialData?.distanceKm || undefined,
     estimatedDurationMin: initialData?.estimatedDurationMin || undefined,
     busId: initialData?.busId || buses[0]?.id || 0,
@@ -692,13 +750,14 @@ function TripModal({
 
   useEffect(() => {
     const isExist = initialData ? !!initialData?.routeId : (routes.length > 0);
+    const rId = resolveInitialRoute();
     setUseExistingRoute(isExist);
     setForm({
       useExistingRoute: isExist,
-      routeId: initialData?.routeId || routes[0]?.id || undefined,
-      origin: initialData?.routeName?.split(" -> ")[0] || "",
-      destination: initialData?.routeName?.split(" -> ")[1] || "",
-      basePrice: initialData?.basePrice || undefined,
+      routeId: rId,
+      origin: resolveInitialOrigin(),
+      destination: resolveInitialDest(),
+      basePrice: resolveInitialPrice(rId),
       distanceKm: initialData?.distanceKm || undefined,
       estimatedDurationMin: initialData?.estimatedDurationMin || undefined,
       busId: initialData?.busId || buses[0]?.id || 0,
@@ -729,6 +788,10 @@ function TripModal({
         toast.error("Điểm đi và điểm đến không được trùng nhau");
         return;
       }
+    }
+    if (form.basePrice === undefined || form.basePrice < 0) {
+      toast.error("Vui lòng nhập giá vé hợp lệ cho chuyến xe");
+      return;
     }
     if (!form.busId) {
       toast.error("Vui lòng chọn xe vận hành");
@@ -816,21 +879,49 @@ function TripModal({
 
           {/* Existing Route */}
           {useExistingRoute && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Tuyến đường <span className="text-rose-400">*</span>
-              </label>
-              <select
-                value={form.routeId || ""}
-                onChange={(e) => setForm({ ...form, routeId: Number(e.target.value) || undefined })}
-                className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
-              >
-                {routes.map((route) => (
-                  <option key={route.id} value={route.id} className="bg-[#101c2d] text-slate-200">
-                    {route.origin} → {route.destination}
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Tuyến đường <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={form.routeId || ""}
+                  onChange={(e) => {
+                    const newRouteId = Number(e.target.value) || undefined;
+                    const selRoute = routes.find(r => r.id === newRouteId);
+                    setForm({
+                      ...form,
+                      routeId: newRouteId,
+                      basePrice: selRoute?.basePrice ?? form.basePrice,
+                    });
+                  }}
+                  className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors cursor-pointer"
+                >
+                  {routes.map((route) => (
+                    <option key={route.id} value={route.id} className="bg-[#101c2d] text-slate-200">
+                      {route.origin} → {route.destination} ({formatPrice(route.basePrice)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Giá vé chuyến xe (VND) <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={form.basePrice ?? ""}
+                  onChange={(e) => setForm({ ...form, basePrice: e.target.value === "" ? undefined : Number(e.target.value) })}
+                  placeholder="VD: 250000"
+                  className="w-full h-10 px-3 bg-[#101c2d] border border-white/[0.08] rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-colors"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Giá vé thiết lập cho chuyến xe này: <strong className="text-emerald-400">{formatPrice(form.basePrice)}</strong>
+                </p>
+              </div>
             </div>
           )}
 

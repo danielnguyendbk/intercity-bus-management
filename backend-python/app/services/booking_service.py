@@ -19,6 +19,16 @@ from app.core.config import settings
 
 class BookingService:
     @staticmethod
+    def _unidecode(text: str) -> str:
+        import unicodedata
+        if not text:
+            return ""
+        return ''.join(
+            c for c in unicodedata.normalize('NFD', text)
+            if unicodedata.category(c) != 'Mn'
+        ).replace('đ', 'd').replace('Đ', 'D')
+
+    @staticmethod
     def get_upcoming_trips(db: Session, target_date: Optional[date] = None) -> List[TripSearchResponse]:
         today = target_date or date.today()
         start_time = datetime.combine(today, datetime.min.time())
@@ -32,6 +42,15 @@ class BookingService:
             query = query.filter(Trip.departureTime <= end_time)
 
         trips = query.order_by(Trip.departureTime.asc()).all()
+
+        # Fallback an toàn: nếu không lọc theo ngày cụ thể mà không có chuyến nào trong tương lai (ví dụ DB demo cũ)
+        # thì hiển thị các chuyến gần nhất để màn hình customer không bị trắng trơn
+        if not trips and not target_date:
+            trips = db.query(Trip).filter(
+                Trip.status != TripStatus.CANCELLED
+            ).order_by(Trip.departureTime.desc()).limit(20).all()
+            trips = sorted(trips, key=lambda t: t.departureTime)
+
         return [BookingService._to_trip_search_response(t, db) for t in trips]
 
     @staticmethod
@@ -48,12 +67,30 @@ class BookingService:
                 Trip.departureTime <= end_time
             )
         else:
-            query = query.filter(Trip.departureTime >= datetime.now() - timedelta(hours=2))
+            # Ưu tiên các chuyến sắp tới (trừ 2 tiếng trước để đón kịp khách)
+            future_check = query.filter(Trip.departureTime >= datetime.now() - timedelta(hours=2))
+            if future_check.count() > 0:
+                query = future_check
 
         if origin and origin.strip():
-            query = query.filter(Route.origin.ilike(f"%{origin.strip()}%"))
+            raw_orig = origin.strip()
+            ascii_orig = BookingService._unidecode(raw_orig)
+            query = query.filter(
+                or_(
+                    Route.origin.ilike(f"%{raw_orig}%"),
+                    Route.origin.ilike(f"%{ascii_orig}%")
+                )
+            )
+
         if destination and destination.strip():
-            query = query.filter(Route.destination.ilike(f"%{destination.strip()}%"))
+            raw_dest = destination.strip()
+            ascii_dest = BookingService._unidecode(raw_dest)
+            query = query.filter(
+                or_(
+                    Route.destination.ilike(f"%{raw_dest}%"),
+                    Route.destination.ilike(f"%{ascii_dest}%")
+                )
+            )
 
         trips = query.order_by(Trip.departureTime.asc()).all()
         return [BookingService._to_trip_search_response(t, db) for t in trips]
@@ -66,8 +103,17 @@ class BookingService:
             Ticket.status.notin_([TicketStatus.CANCELLED, TicketStatus.REFUNDED])
         ).count()
 
-        bus_label = f"{trip.bus.licensePlate} - {trip.bus.busType}" if trip.bus else ""
-        price = trip.route.basePrice if trip.route else Decimal(0)
+        bus_type_raw = trip.bus.busType.value if trip.bus and hasattr(trip.bus.busType, 'value') else (str(trip.bus.busType) if trip.bus else "")
+        bus_type_map = {
+            "SLEEPER": "Xe giường nằm",
+            "SEATER": "Xe ghế ngồi",
+            "LIMOUSINE": "Xe Limousine"
+        }
+        type_name = bus_type_map.get(bus_type_raw.upper(), "Xe khách")
+        plate = trip.bus.licensePlate if trip.bus else "Chưa gán xe"
+        bus_label = f"{plate} · {type_name} ({total_seats} chỗ)" if total_seats > 0 else f"{plate} · {type_name}"
+
+        price = trip.route.basePrice if trip.route and trip.route.basePrice is not None else Decimal(0)
         origin = trip.route.origin if trip.route else ""
         dest = trip.route.destination if trip.route else ""
 

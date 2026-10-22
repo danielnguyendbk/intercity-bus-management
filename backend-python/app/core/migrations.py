@@ -76,6 +76,14 @@ def ensure_database_schema(target_engine=None):
                     except Exception as e:
                         logger.warning(f"Note: modifying status enum: {e}")
 
+        # 3. Đồng bộ giá vé tuyến số 6 (TP.HCM -> Hà Nội) về 10.000đ nếu còn ở mức cũ 1.000.000đ
+        if "routes" in table_names:
+            try:
+                with db_engine.begin() as conn:
+                    conn.execute(text("UPDATE routes SET base_price = 10000.00 WHERE id = 6 AND base_price = 1000000.00"))
+            except Exception as e:
+                logger.warning(f"Note: route 6 price sync: {e}")
+
         logger.info("Database schema verification and auto-migration finished successfully.")
         return True
     except Exception as e:
@@ -105,6 +113,6 @@ if __name__ == "__main__":
         success = ensure_database_schema()
 
     if success:
-        print("✅ Migration completed successfully!")
+        print("[SUCCESS] Migration completed successfully!")
     else:
-        print("❌ Migration encountered errors, please check the log above.")
+        print("[ERROR] Migration encountered errors, please check the log above.")

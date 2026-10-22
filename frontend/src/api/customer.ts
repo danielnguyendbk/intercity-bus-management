@@ -88,20 +88,30 @@ export interface UpdateProfilePayload {
 }
 
 export const searchTrips = (params: {
-  origin: string;
-  destination: string;
-  date: string;
-}): Promise<TripSearchResult[]> =>
-  apiClient
-    .get<TripSearchResult[]>("/public/trips/search", { params })
+  origin?: string;
+  destination?: string;
+  date?: string;
+}): Promise<TripSearchResult[]> => {
+  const cleanParams: Record<string, string> = {};
+  if (params.origin?.trim()) cleanParams.origin = params.origin.trim();
+  if (params.destination?.trim()) cleanParams.destination = params.destination.trim();
+  if (params.date?.trim()) cleanParams.date = params.date.trim();
+
+  return apiClient
+    .get<TripSearchResult[]>("/public/trips/search", { params: cleanParams })
     .then((r) => r.data);
+};
 
 export const getAllUpcomingTrips = (params?: {
   date?: string;
-}): Promise<TripSearchResult[]> =>
-  apiClient
-    .get<TripSearchResult[]>("/public/trips", { params })
+}): Promise<TripSearchResult[]> => {
+  const cleanParams: Record<string, string> = {};
+  if (params?.date?.trim()) cleanParams.date = params.date.trim();
+
+  return apiClient
+    .get<TripSearchResult[]>("/public/trips", { params: cleanParams })
     .then((r) => r.data);
+};
 
 export const getTripSeats = (tripId: number): Promise<SeatStatus[]> =>
   apiClient

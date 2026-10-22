@@ -71,6 +71,7 @@ def _trip_response(trip: Trip) -> dict:
             "employeeId": assignment.employeeId,
             "employeeName": assignment.employee.fullName if assignment.employee else None,
             "role": assignment.assignmentRole.value if assignment.assignmentRole else "",
+            "assignmentRole": assignment.assignmentRole.value if assignment.assignmentRole else "",
         }
         for assignment in trip.assignments
     ]
@@ -79,6 +80,11 @@ def _trip_response(trip: Trip) -> dict:
         "id": trip.id,
         "routeId": trip.route_id,
         "routeName": f"{route.origin} - {route.destination}" if route else "",
+        "origin": route.origin if route else "",
+        "destination": route.destination if route else "",
+        "basePrice": float(route.basePrice) if (route and route.basePrice is not None) else 0,
+        "distanceKm": float(route.distanceKm) if (route and route.distanceKm is not None) else 0,
+        "estimatedDurationMin": route.estimatedDurationMin if route else 0,
         "busId": trip.bus_id,
         "busLabel": bus.licensePlate if bus else "",
         "departureTime": trip.departureTime,
@@ -123,11 +129,16 @@ def create_trip(payload: Dict[str, Any], db: Session = Depends(get_db)):
     # Kiểm tra ràng buộc thời gian & không trùng lịch xe
     validate_trip_schedule(int(bus_id), dep_time, arr_time, exclude_trip_id=None, db=db)
 
+    user_price = payload.get("basePrice")
+    parsed_base_price = Decimal(str(user_price)) if user_price is not None and str(user_price).strip() != "" else None
+
     route_id = payload.get("routeId")
     if route_id:
         route = db.query(Route).filter(Route.id == route_id).first()
         if not route:
             raise HTTPException(status_code=404, detail="Không tìm thấy tuyến đường đã chọn")
+        if parsed_base_price is not None:
+            route.basePrice = parsed_base_price
     else:
         origin = (payload.get("origin") or "").strip()
         destination = (payload.get("destination") or "").strip()
@@ -136,7 +147,7 @@ def create_trip(payload: Dict[str, Any], db: Session = Depends(get_db)):
         if origin.lower() == destination.lower():
             raise HTTPException(status_code=400, detail="Điểm đi và điểm đến không được trùng nhau")
 
-        base_price = Decimal(str(payload.get("basePrice") or 250000))
+        base_price = parsed_base_price if parsed_base_price is not None else Decimal("250000")
         distance_km = int(payload.get("distanceKm") or 100)
         est_min = int(payload.get("estimatedDurationMin") or max(int((arr_time - dep_time).total_seconds() / 60), 60))
 
@@ -148,6 +159,8 @@ def create_trip(payload: Dict[str, Any], db: Session = Depends(get_db)):
         ).first()
         if existing_route:
             route_id = existing_route.id
+            if parsed_base_price is not None:
+                existing_route.basePrice = parsed_base_price
         else:
             route = Route(
                 origin=origin,
@@ -205,11 +218,47 @@ def update_trip(trip_id: int, payload: Dict[str, Any], db: Session = Depends(get
     if new_dep and new_arr and new_bus_id:
         validate_trip_schedule(int(new_bus_id), new_dep, new_arr, exclude_trip_id=trip_id, db=db)
 
+    user_price = payload.get("basePrice")
+    parsed_base_price = Decimal(str(user_price)) if user_price is not None and str(user_price).strip() != "" else None
+
+    # Handle route update
     if "routeId" in payload and payload["routeId"]:
         route = db.query(Route).filter(Route.id == payload["routeId"]).first()
         if not route:
             raise HTTPException(status_code=404, detail="Không tìm thấy tuyến đường đã chọn")
         trip.route_id = payload["routeId"]
+        if parsed_base_price is not None:
+            route.basePrice = parsed_base_price
+    elif "origin" in payload and "destination" in payload:
+        origin = str(payload.get("origin") or "").strip()
+        destination = str(payload.get("destination") or "").strip()
+        if origin and destination:
+            if origin.lower() == destination.lower():
+                raise HTTPException(status_code=400, detail="Điểm đi và điểm đến không được trùng nhau")
+            existing_route = db.query(Route).filter(
+                Route.origin.ilike(origin),
+                Route.destination.ilike(destination),
+                Route.isActive == True
+            ).first()
+            if existing_route:
+                trip.route_id = existing_route.id
+                if parsed_base_price is not None:
+                    existing_route.basePrice = parsed_base_price
+            else:
+                new_route = Route(
+                    origin=origin,
+                    destination=destination,
+                    basePrice=parsed_base_price or Decimal("250000"),
+                    distanceKm=int(payload.get("distanceKm") or 100),
+                    estimatedDurationMin=int(payload.get("estimatedDurationMin") or 120),
+                    isActive=True
+                )
+                db.add(new_route)
+                db.flush()
+                trip.route_id = new_route.id
+    elif parsed_base_price is not None and trip.route:
+        # Cập nhật giá vé cho route hiện tại của trip
+        trip.route.basePrice = parsed_base_price
 
     if new_bus_id:
         trip.bus_id = int(new_bus_id)

@@ -47,6 +47,11 @@ export interface Trip {
   id: number;
   routeId: number;
   routeName: string;
+  origin?: string;
+  destination?: string;
+  basePrice?: number;
+  distanceKm?: number;
+  estimatedDurationMin?: number;
   busId: number;
   busLabel: string;
   departureTime: string;

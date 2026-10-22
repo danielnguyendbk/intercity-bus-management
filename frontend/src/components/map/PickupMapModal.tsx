@@ -444,6 +444,22 @@ export default function PickupMapModal({
     }
   };
 
+  // Tự động định vị khi mở modal nếu người dùng đã từng cấp quyền trước đó
+  useEffect(() => {
+    if (isOpen && !userCoords) {
+      if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+        navigator.permissions
+          .query({ name: "geolocation" as PermissionName })
+          .then((res) => {
+            if (res.state === "granted") {
+              handleLocateMe();
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [isOpen]);
+
   // --------------------------------------------------------------------------
   // ACTIONS: SELECT STATION & PAN
   // --------------------------------------------------------------------------

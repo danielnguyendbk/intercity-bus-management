@@ -222,6 +222,11 @@ export interface AdminTrip {
   id: number;
   routeId: number;
   routeName: string;
+  origin?: string;
+  destination?: string;
+  basePrice?: number;
+  distanceKm?: number;
+  estimatedDurationMin?: number;
   busId: number;
   busLabel: string;
   departureTime: string;
@@ -235,6 +240,7 @@ export interface AdminTrip {
     employeeId: number | null;
     employeeName: string | null;
     role: string;
+    assignmentRole?: string;
   }[];
 }
 
@@ -243,7 +249,7 @@ export interface CreateTripPayload {
   routeId?: number;
   origin?: string;        // Tạo route mới nếu routeId = null
   destination?: string;    // Tạo route mới nếu routeId = null
-  basePrice?: number;     // Giá vé cho route mới
+  basePrice?: number;     // Giá vé
   distanceKm?: number;    // Khoảng cách cho route mới
   estimatedDurationMin?: number; // Thời gian cho route mới
 
@@ -259,31 +265,7 @@ export async function getAdminTrips(params?: {
   status?: string;
 }): Promise<AdminTrip[]> {
   const res = await apiClient.get<AdminTrip[]>("/admin/trips", { params });
-  const trips = res.data;
-
-  // Enrich trips với thông tin nhân sự
-  const enrichedTrips = await Promise.all(
-    trips.map(async (trip) => {
-      try {
-        const assignments = await apiClient.get(`/admin/trip-assignments/${trip.id}`);
-        const employees = await apiClient.get<Employee[]>('/admin/employees');
-
-        const enrichedAssignments = (assignments.data || []).map((a: any) => {
-          const employee = employees.data?.find((e: any) => e.id === a.employeeId);
-          return {
-            ...a,
-            employeeName: employee?.fullName || `NV #${a.employeeId}`
-          };
-        });
-
-        return { ...trip, assignments: enrichedAssignments };
-      } catch {
-        return { ...trip, assignments: [] };
-      }
-    })
-  );
-
-  return enrichedTrips;
+  return res.data;
 }
 
 export async function createAdminTrip(payload: CreateTripPayload): Promise<AdminTrip> {
