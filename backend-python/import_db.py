@@ -5,17 +5,18 @@ import argparse
 from pathlib import Path
 from sqlalchemy import create_engine, text
 
-def import_sql_dump(db_url: str = None, sql_file: str = None):
-    # Resolve database URL
-    if not db_url:
-        from app.core.config import settings
-        db_url = settings.DATABASE_URL
-    else:
-        if db_url.startswith("mysql://"):
-            db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
-        if "charset=" not in db_url:
-            separator = "&" if "?" in db_url else "?"
-            db_url = f"{db_url}{separator}charset=utf8mb4"
+def import_sql_dump(db_url: str = None, sql_file: str = None, engine_instance = None):
+    # Resolve database URL if engine not directly provided
+    if not engine_instance:
+        if not db_url:
+            from app.core.config import settings
+            db_url = settings.DATABASE_URL
+        else:
+            if db_url.startswith("mysql://"):
+                db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+            if "charset=" not in db_url:
+                separator = "&" if "?" in db_url else "?"
+                db_url = f"{db_url}{separator}charset=utf8mb4"
 
     # Resolve SQL dump file
     if not sql_file:
@@ -37,11 +38,13 @@ def import_sql_dump(db_url: str = None, sql_file: str = None):
     print(f"🚀 Connecting to database...")
     print(f"📦 SQL File: {sql_file}")
     
-    connect_args = {}
-    if any(h in db_url.lower() for h in ["tidbcloud.com", "aivencloud.com"]):
-        connect_args["ssl"] = {}
-
-    engine = create_engine(db_url, connect_args=connect_args)
+    if engine_instance:
+        engine = engine_instance
+    else:
+        connect_args = {}
+        if any(h in db_url.lower() for h in ["tidbcloud.com", "aivencloud.com"]):
+            connect_args["ssl"] = {}
+        engine = create_engine(db_url, connect_args=connect_args)
 
     with open(sql_file, "r", encoding="utf-8", errors="replace") as f:
         content = f.read()

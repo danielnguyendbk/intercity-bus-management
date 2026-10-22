@@ -84,6 +84,25 @@ def ensure_database_schema(target_engine=None):
             except Exception as e:
                 logger.warning(f"Note: route 6 price sync: {e}")
 
+        # 4. Tự động nạp dữ liệu từ data_dump.sql nếu database hoàn toàn trống (ví dụ khi mới tạo trên Cloud/Render)
+        if "buses" in table_names and "users" in table_names:
+            try:
+                with db_engine.connect() as conn:
+                    bus_cnt = conn.execute(text("SELECT COUNT(*) FROM buses")).scalar() or 0
+                    user_cnt = conn.execute(text("SELECT COUNT(*) FROM users")).scalar() or 0
+                if bus_cnt == 0 and user_cnt == 0:
+                    logger.info("Database is empty (0 buses, 0 users). Auto-seeding from data_dump.sql...")
+                    import sys
+                    from pathlib import Path
+                    backend_dir = Path(__file__).resolve().parents[2]
+                    if str(backend_dir) not in sys.path:
+                        sys.path.insert(0, str(backend_dir))
+                    from import_db import import_sql_dump
+                    import_sql_dump(engine_instance=db_engine)
+                    logger.info("Auto-seeding from data_dump.sql completed!")
+            except Exception as e:
+                logger.warning(f"Note: auto-seed check/execution: {e}")
+
         logger.info("Database schema verification and auto-migration finished successfully.")
         return True
     except Exception as e:
