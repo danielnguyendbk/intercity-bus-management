@@ -141,12 +141,13 @@ class AdminService:
             monthly_amounts[m_key] += (t.price or Decimal(0))
 
         for i in range(11, -1, -1):
-            # Calculate month
-            m_date = today.replace(day=1) - timedelta(days=i * 30)
-            m_key = m_date.strftime("%Y-%m")
+            total_months = today.year * 12 + today.month - 1 - i
+            y = total_months // 12
+            mo = total_months % 12 + 1
+            m_key = f"{y:04d}-{mo:02d}"
             monthly_revenue.append(MonthlyRevenueDTO(
                 month=m_key,
-                label=m_date.strftime("T%m/%Y"),
+                label=f"T{mo:02d}/{y}",
                 amount=monthly_amounts[m_key]
             ))
 

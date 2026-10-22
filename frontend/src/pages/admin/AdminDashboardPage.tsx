@@ -20,6 +20,7 @@ import toast from "react-hot-toast";
 import { getAdminDashboard, AdminDashboardData } from "../../api/admin";
 import { extractApiErrorMessage } from "../../utils/apiError";
 import AdminRevenueStats from "./AdminRevenueStats";
+import { connectAdminNotifications } from "../../api/admin";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: "Quản trị viên",
@@ -32,10 +33,17 @@ const BUS_STATUS_LABELS: Record<string, string> = {
   MAINTENANCE: "Bảo trì",
 };
 
+const BUS_TYPE_LABELS: Record<string, string> = {
+  LIMOUSINE: "Limousine VIP",
+  SLEEPER: "Giường nằm",
+  SEAT: "Ghế ngồi",
+};
+
 export default function AdminDashboardPage() {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fetchData = (isSilent = false) => {
@@ -60,6 +68,43 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  // Kết nối SSE để nhận thông báo real-time khi có vé mới, thanh toán SePay hoặc góp ý
+  useEffect(() => {
+    let cancelled = false;
+    const es = connectAdminNotifications(
+      (booking) => {
+        if (cancelled) return;
+        toast(
+          `🆕 Vé mới #${booking.ticketId} · Ghế ${booking.seatNumber} · ${booking.passengerName || "Khách"}`,
+          { duration: 6000 }
+        );
+        fetchData(true);
+        setRefreshKey((k) => k + 1);
+      },
+      (payment) => {
+        if (cancelled) return;
+        toast.success(
+          `💳 Thanh toán thành công · Vé #${payment.ticketId} · Ghế ${payment.seatNumber}`,
+          { duration: 8000 }
+        );
+        fetchData(true);
+        setRefreshKey((k) => k + 1);
+      },
+      (feedback) => {
+        if (cancelled) return;
+        toast(
+          `📬 Phản hồi mới từ ${feedback.userFullName || feedback.username}: "${feedback.subject}"`,
+          { duration: 6000 }
+        );
+      }
+    );
+
+    return () => {
+      cancelled = true;
+      es.close();
+    };
   }, []);
 
   const insuranceAlerts = useMemo(() => data?.insuranceAlerts || [], [data]);
@@ -145,7 +190,10 @@ export default function AdminDashboardPage() {
 
           <button
             type="button"
-            onClick={() => fetchData(true)}
+            onClick={() => {
+              fetchData(true);
+              setRefreshKey((k) => k + 1);
+            }}
             disabled={isRefreshing}
             className="inline-flex items-center justify-center rounded-lg border border-white/[0.08] bg-[#111c2e] p-2 text-slate-400 hover:text-white hover:border-white/[0.14] transition-colors disabled:opacity-50"
             title="Làm mới dữ liệu"
@@ -158,75 +206,87 @@ export default function AdminDashboardPage() {
       {/* ==================== 2. KPI GRID (4 cards ngang, h: 104-112px) ==================== */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* KPI 1: Tổng người dùng */}
-        <div className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-white/[0.14] transition-colors">
+        <Link
+          to="/admin/users"
+          className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-emerald-500/40 hover:bg-[#1a2740] transition-all group"
+        >
           <div>
-            <span className="text-xs font-medium text-slate-400">Tổng người dùng</span>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-white">
+            <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Tổng người dùng</span>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
               {data.totalUsers}
             </p>
             <p className="mt-0.5 text-[11px] text-slate-400">
               {customerCount} tài khoản khách hàng
             </p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
             <Users className="h-5 w-5" />
           </div>
-        </div>
+        </Link>
 
         {/* KPI 2: Tổng xe */}
-        <div className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-white/[0.14] transition-colors">
+        <Link
+          to="/admin/buses"
+          className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-emerald-500/40 hover:bg-[#1a2740] transition-all group"
+        >
           <div>
-            <span className="text-xs font-medium text-slate-400">Tổng đội xe</span>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-white">
+            <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Tổng đội xe</span>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
               {data.totalBuses}
             </p>
             <p className="mt-0.5 text-[11px] text-emerald-400">
               {availableBusesCount} xe đang sẵn sàng
             </p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
             <Bus className="h-5 w-5" />
           </div>
-        </div>
+        </Link>
 
         {/* KPI 3: Tổng tuyến */}
-        <div className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-white/[0.14] transition-colors">
+        <Link
+          to="/admin/trips"
+          className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-emerald-500/40 hover:bg-[#1a2740] transition-all group"
+        >
           <div>
-            <span className="text-xs font-medium text-slate-400">Tuyến đường</span>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-white">
+            <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Tuyến đường</span>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
               {data.totalRoutes}
             </p>
             <p className="mt-0.5 text-[11px] text-slate-400">
               Tuyến liên tỉnh đang mở bán
             </p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
             <Route className="h-5 w-5" />
           </div>
-        </div>
+        </Link>
 
         {/* KPI 4: Chuyến hôm nay */}
-        <div className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-white/[0.14] transition-colors">
+        <Link
+          to="/admin/trips"
+          className="rounded-xl border border-white/[0.08] bg-[#172238] p-4 flex items-center justify-between hover:border-emerald-500/40 hover:bg-[#1a2740] transition-all group"
+        >
           <div>
-            <span className="text-xs font-medium text-slate-400">Chuyến hôm nay</span>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-white">
+            <span className="text-xs font-medium text-slate-400 group-hover:text-slate-300">Chuyến hôm nay</span>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-white group-hover:text-emerald-400 transition-colors">
               {data.todayTrips}
             </p>
             <p className="mt-0.5 text-[11px] text-slate-400">
               Khởi hành trong ngày
             </p>
           </div>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
             <Calendar className="h-5 w-5" />
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* ==================== 3. 2-COLUMN SECTION (62% LEFT / 38% RIGHT) ==================== */}
       <div className="grid gap-5 lg:grid-cols-12">
         {/* LEFT: 62% (lg:col-span-7 or 8) — Revenue overview chart */}
         <div className="lg:col-span-7 xl:col-span-8">
-          <AdminRevenueStats variant="dashboard" />
+          <AdminRevenueStats variant="dashboard" refreshKey={refreshKey} />
         </div>
 
         {/* RIGHT: 38% (lg:col-span-5 or 4) — Fleet status & Role distribution */}
@@ -271,14 +331,22 @@ export default function AdminDashboardPage() {
               )}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px] text-slate-400">
-              <span>Khả năng phục vụ:</span>
-              <span className="font-semibold text-emerald-400">
-                {data.totalBuses > 0
-                  ? Math.round((availableBusesCount / data.totalBuses) * 100)
-                  : 0}
-                % sẵn sàng
+            <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between">
+              <span className="text-[11px] text-slate-400">
+                Tỷ lệ sẵn sàng:{" "}
+                <strong className="text-emerald-400">
+                  {data.totalBuses > 0
+                    ? Math.round((availableBusesCount / data.totalBuses) * 100)
+                    : 0}%
+                </strong>
               </span>
+              <Link
+                to="/admin/buses"
+                className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors"
+              >
+                <span>Quản lý đội xe</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
 
@@ -409,7 +477,7 @@ export default function AdminDashboardPage() {
                         {alert.licensePlate}
                       </td>
                       <td className="px-5 py-3 text-slate-400">
-                        {alert.busType}
+                        {BUS_TYPE_LABELS[alert.busType] ?? alert.busType}
                       </td>
                       <td className="px-5 py-3">
                         <span className="rounded bg-white/[0.05] border border-white/[0.08] px-2 py-0.5 text-[11px] text-slate-300">

@@ -85,16 +85,17 @@ function RevenueTooltip({ active, payload, label }: CustomTooltipProps) {
 
 interface AdminRevenueStatsProps {
   variant?: "full" | "dashboard";
+  refreshKey?: number;
 }
 
-export default function AdminRevenueStats({ variant = "full" }: AdminRevenueStatsProps) {
+export default function AdminRevenueStats({ variant = "full", refreshKey = 0 }: AdminRevenueStatsProps) {
   const [data, setData] = useState<AdminRevenueStatsType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodKey>("weekly");
 
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
+    if (!data) setIsLoading(true);
     getAdminRevenueStats()
       .then((res) => {
         if (!cancelled) setData(res);
@@ -110,7 +111,7 @@ export default function AdminRevenueStats({ variant = "full" }: AdminRevenueStat
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   const chartData = useMemo<ChartPoint[]>(() => {
     if (!data) return [];
@@ -230,7 +231,7 @@ export default function AdminRevenueStats({ variant = "full" }: AdminRevenueStat
           </div>
 
           {/* Compact Chart */}
-          <div className="mt-2 h-[260px] w-full">
+          <div className="mt-2 h-[260px] min-h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <defs>
