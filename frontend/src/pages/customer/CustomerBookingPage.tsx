@@ -299,16 +299,42 @@ export default function CustomerBookingPage() {
     loadTrips();
   };
 
-  // Seat partitioning: Deck 1 (Floor 1) vs Deck 2 (Floor 2)
+  // Sắp xếp và phân tầng ghế chuẩn (Deck 1 vs Deck 2)
   const { deck1Seats, deck2Seats, hasMultipleDecks } = useMemo(() => {
-    const d1 = seats.filter((s) => s.seatNumber.startsWith("A") || !s.seatNumber.startsWith("B"));
-    const d2 = seats.filter((s) => s.seatNumber.startsWith("B"));
+    // Sắp xếp ghế theo hàng chữ cái (A, B, C...) và cột số (1, 2...)
+    const sorted = [...seats].sort((a, b) => {
+      const matchA = a.seatNumber.match(/^([a-zA-Z]+)(\d+)$/);
+      const matchB = b.seatNumber.match(/^([a-zA-Z]+)(\d+)$/);
+      if (matchA && matchB) {
+        const rowDiff = matchA[1].localeCompare(matchB[1]);
+        if (rowDiff !== 0) return rowDiff;
+        return parseInt(matchA[2], 10) - parseInt(matchB[2], 10);
+      }
+      return a.seatNumber.localeCompare(b.seatNumber, undefined, { numeric: true });
+    });
+
+    const isSleeper =
+      selectedTrip?.busLabel?.toLowerCase().includes("giường") ||
+      selectedTrip?.busLabel?.toLowerCase().includes("sleeper") ||
+      seats.length > 24;
+
+    if (isSleeper && sorted.length >= 20) {
+      // Chia thành 2 tầng đồng đều theo các cặp hàng
+      const half = Math.ceil(sorted.length / 2);
+      const splitIndex = half % 2 === 0 ? half : half + 1;
+      return {
+        deck1Seats: sorted.slice(0, splitIndex),
+        deck2Seats: sorted.slice(splitIndex),
+        hasMultipleDecks: true,
+      };
+    }
+
     return {
-      deck1Seats: d2.length > 0 ? d1 : seats,
-      deck2Seats: d2,
-      hasMultipleDecks: d2.length > 0,
+      deck1Seats: sorted,
+      deck2Seats: [],
+      hasMultipleDecks: false,
     };
-  }, [seats]);
+  }, [seats, selectedTrip?.busLabel]);
 
   const displayedSeats = activeDeck === "DECK1" || !hasMultipleDecks ? deck1Seats : deck2Seats;
 
@@ -317,13 +343,17 @@ export default function CustomerBookingPage() {
     const list = (pickupCity ? getCityData(pickupCity)?.pickupPoints : undefined) || [];
     if (list.length > 0) return list;
     const cleanCity = normalizeCityName(selectedTrip?.origin || pickupCity || "Khởi hành");
-    const fallbackList = getCityData(cleanCity)?.pickupPoints;
+    const fallbackCityData = getCityData(cleanCity) || getCityData(pickupCity || "");
+    const fallbackList = fallbackCityData?.pickupPoints;
     if (fallbackList && fallbackList.length > 0) return fallbackList;
+    const center = fallbackCityData?.center || { lat: 21.0285, lng: 105.8542 };
     return [
       {
         id: "default-origin-1",
         name: `Bến xe trung tâm ${cleanCity}`,
         address: `Khu vực sảnh đón khách xe liên tỉnh, ${cleanCity}`,
+        lat: center.lat,
+        lng: center.lng,
       },
     ];
   }, [pickupCity, selectedTrip?.origin]);
@@ -332,13 +362,17 @@ export default function CustomerBookingPage() {
     const list = (dropoffCity ? getCityData(dropoffCity)?.pickupPoints : undefined) || [];
     if (list.length > 0) return list;
     const cleanCity = normalizeCityName(selectedTrip?.destination || dropoffCity || "Đến");
-    const fallbackList = getCityData(cleanCity)?.pickupPoints;
+    const fallbackCityData = getCityData(cleanCity) || getCityData(dropoffCity || "");
+    const fallbackList = fallbackCityData?.pickupPoints;
     if (fallbackList && fallbackList.length > 0) return fallbackList;
+    const center = fallbackCityData?.center || { lat: 10.7769, lng: 106.7009 };
     return [
       {
         id: "default-dest-1",
         name: `Bến xe trung tâm ${cleanCity}`,
         address: `Khu vực sảnh trả khách xe liên tỉnh, ${cleanCity}`,
+        lat: center.lat,
+        lng: center.lng,
       },
     ];
   }, [dropoffCity, selectedTrip?.destination]);
@@ -714,37 +748,182 @@ export default function CustomerBookingPage() {
                 </span>
               </div>
 
-              {/* Seats Grid */}
+              {/* Sơ đồ ghế thực tế theo thân xe */}
               {loadingSeats ? (
                 <div className="py-12 text-center text-sm text-slate-500">Đang tải sơ đồ ghế...</div>
               ) : displayedSeats.length === 0 ? (
                 <div className="py-12 text-center text-sm text-slate-500">Chưa có ghế trên tầng này.</div>
               ) : (
-                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
-                  {displayedSeats.map((seat) => {
-                    const isSelected = selectedSeat?.id === seat.id;
-                    const isBooked = seat.booked;
+                <div className="space-y-3">
+                  {/* Cabin bác tài / Mũi xe */}
+                  <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100/80 border border-slate-200/80 text-xs font-semibold text-slate-700">
+                    <div className="flex items-center gap-1.5">
+                      <Bus className="w-4 h-4 text-[#0f2849]" />
+                      <span>ĐẦU XE · BUỒNG LÁI</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                      <span>Cột trái (1)</span>
+                      <span>·</span>
+                      <span>Lối đi</span>
+                      <span>·</span>
+                      <span>Cột phải (2)</span>
+                    </div>
+                  </div>
 
-                    return (
-                      <button
-                        key={seat.id}
-                        type="button"
-                        onClick={() => handleSelectSeat(seat)}
-                        disabled={isBooked}
-                        className={`flex h-12 flex-col items-center justify-center rounded-lg border text-xs font-semibold transition-all ${isBooked
-                            ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
-                            : isSelected
-                              ? "border-amber-500 bg-amber-400 text-slate-950 shadow-sm ring-2 ring-amber-400/40"
-                              : "border-emerald-200 bg-emerald-50/80 text-emerald-800 hover:border-emerald-400 hover:bg-emerald-100 cursor-pointer"
-                          }`}
-                      >
-                        <span>{seat.seatNumber}</span>
-                        <span className="text-[10px] font-normal opacity-80">
-                          {isBooked ? "Đã bán" : isSelected ? "Đã chọn" : "Trống"}
-                        </span>
-                      </button>
-                    );
-                  })}
+                  {/* Danh sách các hàng ghế 2 cột chuẩn */}
+                  <div className="space-y-2 p-2 sm:p-3 rounded-2xl bg-slate-50/70 border border-slate-200/70">
+                    {(() => {
+                      // Nhóm ghế theo hàng chữ cái (A, B, C...)
+                      const rowMap = new Map<string, { col1?: SeatStatus; col2?: SeatStatus; extra: SeatStatus[] }>();
+                      const genericList: SeatStatus[] = [];
+
+                      displayedSeats.forEach((seat) => {
+                        const m = seat.seatNumber.match(/^([a-zA-Z]+)(\d+)$/);
+                        if (m) {
+                          const row = m[1].toUpperCase();
+                          const col = parseInt(m[2], 10);
+                          if (!rowMap.has(row)) rowMap.set(row, { extra: [] });
+                          const r = rowMap.get(row)!;
+                          if (col === 1) r.col1 = seat;
+                          else if (col === 2) r.col2 = seat;
+                          else r.extra.push(seat);
+                        } else {
+                          genericList.push(seat);
+                        }
+                      });
+
+                      const rows = Array.from(rowMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+
+                      if (rows.length > 0) {
+                        return (
+                          <>
+                            {rows.map(([rowName, { col1, col2, extra }]) => {
+                              const renderSeatBtn = (s: SeatStatus, label: string) => {
+                                const isSelected = selectedSeat?.id === s.id;
+                                const isBooked = s.booked;
+                                return (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => handleSelectSeat(s)}
+                                    disabled={isBooked}
+                                    className={`w-full h-13 rounded-xl border flex flex-col items-center justify-center transition-all select-none ${
+                                      isBooked
+                                        ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed shadow-2xs"
+                                        : isSelected
+                                        ? "border-amber-500 bg-amber-400 text-slate-950 font-bold shadow-md ring-2 ring-amber-400/40 scale-102"
+                                        : "border-emerald-200 bg-white hover:bg-emerald-50 text-emerald-900 hover:border-emerald-400 hover:shadow-xs cursor-pointer active:scale-98"
+                                    }`}
+                                  >
+                                    <span className="text-sm font-extrabold">{s.seatNumber}</span>
+                                    <span className="text-[10px] font-normal opacity-80 mt-0.5">
+                                      {isBooked ? "Đã bán" : isSelected ? "Đã chọn" : label}
+                                    </span>
+                                  </button>
+                                );
+                              };
+
+                              return (
+                                <div
+                                  key={rowName}
+                                  className="flex items-center justify-between gap-3 py-1.5 px-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs"
+                                >
+                                  {/* Cột trái: Ghế 1 */}
+                                  <div className="w-28 sm:w-32">
+                                    {col1 ? (
+                                      renderSeatBtn(col1, "Cửa sổ trái")
+                                    ) : (
+                                      <div className="h-13 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400">
+                                        Không có ghế
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Lối đi giữa */}
+                                  <div className="flex-1 flex flex-col items-center justify-center py-1">
+                                    <span className="text-[11px] font-bold text-slate-400 tracking-wider">
+                                      HÀNG {rowName}
+                                    </span>
+                                    <div className="w-12 h-0.5 bg-slate-200 rounded-full mt-0.5" />
+                                  </div>
+
+                                  {/* Cột phải: Ghế 2 */}
+                                  <div className="w-28 sm:w-32">
+                                    {col2 ? (
+                                      renderSeatBtn(col2, "Cửa sổ phải")
+                                    ) : (
+                                      <div className="h-13 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center text-[10px] text-slate-400">
+                                        Không có ghế
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Ghế phụ / hàng cuối (nếu có) */}
+                            {genericList.length > 0 && (
+                              <div className="pt-2 grid grid-cols-4 gap-2">
+                                {genericList.map((s) => (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => handleSelectSeat(s)}
+                                    disabled={s.booked}
+                                    className={`h-12 rounded-xl border flex flex-col items-center justify-center text-xs font-semibold ${
+                                      s.booked
+                                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                        : selectedSeat?.id === s.id
+                                        ? "bg-amber-400 text-slate-950 font-bold border-amber-500"
+                                        : "bg-white text-emerald-900 border-emerald-200 hover:bg-emerald-50"
+                                    }`}
+                                  >
+                                    <span>{s.seatNumber}</span>
+                                    <span className="text-[9px] opacity-75">{s.booked ? "Đã bán" : "Trống"}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        );
+                      }
+
+                      // Fallback cho xe không dùng format A1/A2
+                      return (
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+                          {displayedSeats.map((seat) => {
+                            const isSelected = selectedSeat?.id === seat.id;
+                            const isBooked = seat.booked;
+                            return (
+                              <button
+                                key={seat.id}
+                                type="button"
+                                onClick={() => handleSelectSeat(seat)}
+                                disabled={isBooked}
+                                className={`flex h-12 flex-col items-center justify-center rounded-xl border text-xs font-semibold transition-all ${
+                                  isBooked
+                                    ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    : isSelected
+                                    ? "border-amber-500 bg-amber-400 text-slate-950 shadow-sm ring-2 ring-amber-400/40"
+                                    : "border-emerald-200 bg-white text-emerald-800 hover:border-emerald-400 hover:bg-emerald-50 cursor-pointer"
+                                }`}
+                              >
+                                <span>{seat.seatNumber}</span>
+                                <span className="text-[10px] font-normal opacity-80">
+                                  {isBooked ? "Đã bán" : isSelected ? "Đã chọn" : "Trống"}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Đuôi xe */}
+                  <div className="py-1 text-center text-xs font-medium text-slate-400 tracking-wider">
+                    ▼ ĐUÔI XE ▼
+                  </div>
                 </div>
               )}
             </div>

@@ -83,6 +83,14 @@ def import_sql_dump(db_url: str = None, sql_file: str = None):
     print(f"✅ Import completed successfully!")
     print(f"   Total executed: {success_count} statements ({error_count} ignored/warnings).")
 
+    try:
+        from app.core.migrations import ensure_database_schema
+        print(f"🔄 Checking and migrating database schema to latest version...")
+        ensure_database_schema(engine)
+        print(f"✅ Schema is up-to-date!")
+    except Exception as e:
+        print(f"⚠️ Post-import migration note: {e}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Import data_dump.sql to MySQL database")
     parser.add_argument("--url", help="Database connection URL (e.g. mysql+pymysql://user:pass@host:port/db)")

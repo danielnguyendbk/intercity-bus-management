@@ -113,14 +113,31 @@ function InvoiceModal({
 
   const [showMapModal, setShowMapModal] = useState<"pickup" | "dropoff" | null>(null);
 
-  const pickupCityData = getCityData(ticket.origin || "");
-  const dropoffCityData = getCityData(ticket.destination || "");
+  const pickupCityData = getCityData(ticket.origin || "") || getCityData(normalizeCityName(ticket.origin || ""));
+  const dropoffCityData = getCityData(ticket.destination || "") || getCityData(normalizeCityName(ticket.destination || ""));
 
   const activeCityData = showMapModal === "pickup" ? pickupCityData : dropoffCityData;
   const activeCityName = showMapModal === "pickup"
     ? normalizeCityName(ticket.origin || "")
     : normalizeCityName(ticket.destination || "");
-  const activePoints = activeCityData?.pickupPoints || [];
+
+  const activePoints: PickupPoint[] = useMemo(() => {
+    if (activeCityData?.pickupPoints && activeCityData.pickupPoints.length > 0) {
+      return activeCityData.pickupPoints;
+    }
+    const center = activeCityData?.center || { lat: 21.0285, lng: 105.8542 };
+    return [
+      {
+        id: "ticket-station-fallback",
+        name: showMapModal === "pickup"
+          ? (ticket.pickupPoint || `Bến xe ${activeCityName || "đón khách"}`)
+          : (ticket.dropoffPoint || `Bến xe ${activeCityName || "trả khách"}`),
+        address: `Khu vực sảnh bến xe trung tâm, ${activeCityName || "Việt Nam"}`,
+        lat: center.lat,
+        lng: center.lng,
+      },
+    ];
+  }, [activeCityData, activeCityName, showMapModal, ticket.pickupPoint, ticket.dropoffPoint]);
 
   const currentSelectedPoint: PickupPoint | null = useMemo(() => {
     if (!showMapModal || !activePoints.length) return null;

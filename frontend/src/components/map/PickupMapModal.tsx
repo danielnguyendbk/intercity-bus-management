@@ -108,6 +108,32 @@ export default function PickupMapModal({
   // --------------------------------------------------------------------------
   // LEAFLET MAP INITIALIZATION & LIFECYCLE
   // --------------------------------------------------------------------------
+  // Clean up map when modal closes
+  useEffect(() => {
+    if (!isOpen && mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current.remove();
+      } catch {
+        // ignore
+      }
+      mapInstanceRef.current = null;
+    }
+  }, [isOpen]);
+
+  // Clean up map when modal unmounts completely
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        try {
+          mapInstanceRef.current.remove();
+        } catch {
+          // ignore
+        }
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!isOpen || !mapContainerRef.current) return;
 
@@ -118,48 +144,72 @@ export default function PickupMapModal({
       ? [points[0].lat, points[0].lng]
       : [10.7769, 106.7009];
 
-    // Create map instance if not existing
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: defaultCenter,
-        zoom: 13,
-        zoomControl: false,
-      });
-
-      // Add OpenStreetMap tiles
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      // Add custom zoom control at bottom-right
-      L.control.zoom({ position: "bottomright" }).addTo(map);
-
-      mapInstanceRef.current = map;
+    // Recreate map instance if container changed or not existing
+    if (mapInstanceRef.current) {
+      try {
+        mapInstanceRef.current.remove();
+      } catch {
+        // ignore
+      }
+      mapInstanceRef.current = null;
     }
 
-    const map = mapInstanceRef.current;
+    const map = L.map(mapContainerRef.current, {
+      center: defaultCenter,
+      zoom: 13,
+      zoomControl: false,
+    });
 
-    // Invalidate size after modal animation
+    // Add OpenStreetMap tiles
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    // Add custom zoom control at bottom-right
+    L.control.zoom({ position: "bottomright" }).addTo(map);
+
+    // Click anywhere on map to select nearest station or navigate
+    map.on("click", (e) => {
+      const clickLat = e.latlng.lat;
+      const clickLng = e.latlng.lng;
+
+      if (points.length > 0) {
+        let nearest: PickupPoint | null = null;
+        let minDist = Infinity;
+        points.forEach((p) => {
+          if (p.lat && p.lng) {
+            const d = calculateDistance(clickLat, clickLng, p.lat, p.lng);
+            if (d < minDist) {
+              minDist = d;
+              nearest = p;
+            }
+          }
+        });
+
+        if (nearest) {
+          handleSelect(nearest);
+          toast(`Đã chọn trạm gần điểm bạn bấm nhất: ${(nearest as PickupPoint).name} (${formatDistance(minDist)})`, {
+            icon: "📍",
+          });
+        }
+      }
+    });
+
+    mapInstanceRef.current = map;
+
+    // Invalidate size after modal animation & on window resize
     const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 250);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [isOpen, cityData, points]);
-
-  // Clean up map when modal unmounts completely
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
+  }, [isOpen, cityData, cityName]);
 
   // --------------------------------------------------------------------------
   // RENDER MARKERS (STATIONS & USER LOCATION)
@@ -325,7 +375,11 @@ export default function PickupMapModal({
     try {
       const coords = await getCurrentUserLocation();
       setUserCoords(coords);
-      toast.success("Đã xác định vị trí của bạn thành công!");
+      if (coords.isApproximate) {
+        toast.success("Đã ước tính vị trí khu vực của bạn!");
+      } else {
+        toast.success("Đã xác định vị trí của bạn thành công!");
+      }
 
       const map = mapInstanceRef.current;
       if (map) {
@@ -373,7 +427,18 @@ export default function PickupMapModal({
     } catch (err: any) {
       const msg = err.message || "Không thể lấy vị trí hiện tại.";
       setGeoError(msg);
-      toast.error(msg);
+
+      // Pan to city center smoothly so map is always in a good state
+      const map = mapInstanceRef.current;
+      const defaultCenter: [number, number] = cityData?.center
+        ? [cityData.center.lat, cityData.center.lng]
+        : points.length > 0 && points[0].lat !== undefined && points[0].lng !== undefined
+        ? [points[0].lat, points[0].lng]
+        : [10.7769, 106.7009];
+      if (map) {
+        map.flyTo(defaultCenter, 13, { duration: 1.0 });
+      }
+      toast(msg, { icon: "ℹ️" });
     } finally {
       setIsLocating(false);
     }

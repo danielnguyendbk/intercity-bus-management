@@ -48,46 +48,105 @@ export function formatDistance(km: number): string {
   return `${km.toFixed(1)} km`;
 }
 
-/**
- * Lấy tọa độ GPS hiện tại của thiết bị người dùng qua HTML5 Geolocation API
- */
-export function getCurrentUserLocation(): Promise<UserCoordinates> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Trình duyệt của bạn không hỗ trợ chức năng định vị GPS."));
-      return;
-    }
+export interface UserCoordinates {
+  lat: number;
+  lng: number;
+  accuracy?: number;
+  isApproximate?: boolean;
+}
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
-      },
-      (error) => {
-        let message = "Không thể lấy vị trí hiện tại.";
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = "Bạn đã từ chối chia sẻ vị trí. Vui lòng cho phép quyền vị trí trên trình duyệt.";
-            break;
-          case error.POSITION_UNAVAILABLE:
-            message = "Thông tin vị trí hiện tại không khả dụng trên thiết bị.";
-            break;
-          case error.TIMEOUT:
-            message = "Thời gian lấy vị trí GPS quá lâu (hết hạn). Vui lòng thử lại.";
-            break;
-        }
-        reject(new Error(message));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000,
+/**
+ * Lấy tọa độ vị trí của người dùng với cơ chế fallback 3 lớp:
+ * 1. HTML5 Geolocation (nhanh qua Wi-Fi / Cell tower)
+ * 2. HTML5 Geolocation (chính xác cao qua GPS)
+ * 3. Ước tính vị trí qua IP Geolocation công cộng nếu trình duyệt bị chặn hoặc hết hạn
+ */
+export async function getCurrentUserLocation(): Promise<UserCoordinates> {
+  // Lớp 1: Thử HTML5 Geolocation (low accuracy - nhanh, không bị treo)
+  const tryHtml5 = (highAccuracy: boolean, timeoutMs: number): Promise<UserCoordinates> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Trình duyệt không hỗ trợ Geolocation API"));
+        return;
       }
-    );
-  });
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            isApproximate: false,
+          });
+        },
+        (err) => reject(err),
+        {
+          enableHighAccuracy: highAccuracy,
+          timeout: timeoutMs,
+          maximumAge: 60000,
+        }
+      );
+    });
+  };
+
+  try {
+    // Thử lấy vị trí nhanh (low accuracy 5s)
+    return await tryHtml5(false, 5000);
+  } catch {
+    // Thử lại với high accuracy 5s
+    try {
+      return await tryHtml5(true, 5000);
+    } catch {
+      // Lớp 3: Fallback qua IP Geolocation công cộng
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        const res = await fetch("https://ipwho.is/", {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.success && data.latitude && data.longitude) {
+            return {
+              lat: Number(data.latitude),
+              lng: Number(data.longitude),
+              accuracy: 5000,
+              isApproximate: true,
+            };
+          }
+        }
+      } catch {
+        // Fallback secondary IP API nếu ipwho.is gặp sự cố
+        try {
+          const controller2 = new AbortController();
+          const timeoutId2 = setTimeout(() => controller2.abort(), 3000);
+          const res2 = await fetch("https://ipapi.co/json/", {
+            signal: controller2.signal,
+          });
+          clearTimeout(timeoutId2);
+          if (res2.ok) {
+            const data2 = await res2.json();
+            if (data2 && data2.latitude && data2.longitude) {
+              return {
+                lat: Number(data2.latitude),
+                lng: Number(data2.longitude),
+                accuracy: 5000,
+                isApproximate: true,
+              };
+            }
+          }
+        } catch {
+          // Bỏ qua lỗi IP geo
+        }
+      }
+
+      throw new Error(
+        "Không thể lấy được vị trí GPS. Bạn có thể chọn điểm đón trực tiếp trên bản đồ hoặc trong danh sách."
+      );
+    }
+  }
 }
 
 /**
