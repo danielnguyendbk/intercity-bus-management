@@ -16,6 +16,7 @@ import Pagination from "../../components/ui/Pagination";
 import PageHeader from "../../components/ui/PageHeader";
 import { Button } from "../../components/ui/Button";
 import { Toolbar, SearchInput, SelectInput } from "../../components/ui/Toolbar";
+import ConfirmModal from "../../components/ui/ConfirmModal";
 import { Download, Check, X, Loader2, MapPin, Flag } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -51,6 +52,7 @@ const AdminTicketsPage: React.FC = () => {
 
   // State quản lý hành động xác nhận / hủy vé
   const [actionTicketId, setActionTicketId] = useState<number | null>(null);
+  const [ticketToCancel, setTicketToCancel] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -144,12 +146,6 @@ const AdminTicketsPage: React.FC = () => {
   };
 
   const handleConfirm = async (ticketId: number) => {
-    if (
-      !window.confirm(
-        "Xác nhận đã gọi điện và thông tin chính xác cho vé này? Khách vẫn có thể thanh toán sau."
-      )
-    )
-      return;
     setActionTicketId(ticketId);
     try {
       await confirmTicket(ticketId);
@@ -167,12 +163,6 @@ const AdminTicketsPage: React.FC = () => {
   };
 
   const handleMarkPaid = async (ticketId: number) => {
-    if (
-      !window.confirm(
-        "Xác nhận khách đã thanh toán (chuyển khoản hoặc tiền mặt)?"
-      )
-    )
-      return;
     setActionTicketId(ticketId);
     try {
       await markTicketAsPaid(ticketId);
@@ -189,8 +179,13 @@ const AdminTicketsPage: React.FC = () => {
     }
   };
 
-  const handleCancel = async (ticketId: number) => {
-    if (!window.confirm("Hủy vé này? Lịch sử đặt vé vẫn được lưu lại.")) return;
+  const handleCancel = (ticketId: number) => {
+    setTicketToCancel(ticketId);
+  };
+
+  const confirmCancelTicket = async () => {
+    if (!ticketToCancel) return;
+    const ticketId = ticketToCancel;
     setActionTicketId(ticketId);
     try {
       await cancelTicketByAdmin(ticketId);
@@ -200,8 +195,9 @@ const AdminTicketsPage: React.FC = () => {
         )
       );
       toast.success("Đã hủy vé thành công!");
+      setTicketToCancel(null);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Hủy vé thất bại");
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || "Hủy vé thất bại");
     } finally {
       setActionTicketId(null);
     }
@@ -439,6 +435,19 @@ const AdminTicketsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Modal xác nhận hủy vé thay cho alert trình duyệt */}
+      <ConfirmModal
+        isOpen={ticketToCancel !== null}
+        title="Hủy vé đặt"
+        message={`Bạn có chắc chắn muốn hủy vé #${ticketToCancel}? Lịch sử đặt vé vẫn được lưu lại trong hệ thống.`}
+        confirmText="Hủy vé"
+        cancelText="Đóng"
+        variant="danger"
+        isLoading={actionTicketId === ticketToCancel}
+        onConfirm={confirmCancelTicket}
+        onClose={() => setTicketToCancel(null)}
+      />
     </div>
   );
 };

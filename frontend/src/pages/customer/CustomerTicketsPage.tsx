@@ -450,7 +450,6 @@ export default function CustomerTicketsPage() {
   useEffect(() => { loadFeedbackMap(); }, [loadFeedbackMap]);
 
   const handleCancel = async (id: number) => {
-    if (!window.confirm("Bạn chắc chắn muốn hủy vé này?")) return;
     setCancellingId(id);
     try {
       const updated = await cancelTicket(id);

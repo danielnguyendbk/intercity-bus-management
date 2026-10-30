@@ -176,11 +176,6 @@ export default function AdminUsersPage() {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa tài khoản "${user.username}" không?`
-    );
-    if (!confirmed) return;
-
     try {
       await deleteUser(user.id);
       toast.success(`Đã xóa tài khoản ${user.username}`);

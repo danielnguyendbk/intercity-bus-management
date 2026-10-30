@@ -269,7 +269,6 @@ export default function AdminTripsPage() {
   };
 
   const handleDeleteTrip = async (tripId: number) => {
-    if (!window.confirm("Bạn có chắc muốn xoá chuyến này?")) return;
     try {
       await deleteAdminTrip(tripId);
       toast.success("Đã xoá chuyến");

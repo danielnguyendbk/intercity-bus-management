@@ -273,7 +273,6 @@ export default function FeedbackInboxModal({
 
   const handleDelete = async () => {
     if (!selectedDetail) return;
-    if (!window.confirm("Xóa phản hồi này? Hành động không thể hoàn tác.")) return;
     try {
       await deleteAdminFeedback(selectedDetail.id);
       toast.success("Đã xóa phản hồi");

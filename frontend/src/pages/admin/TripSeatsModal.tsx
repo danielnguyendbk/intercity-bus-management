@@ -218,7 +218,6 @@ export default function TripSeatsModal({ tripId, tripLabel, onClose, onChanged }
 
   const handleCancel = async () => {
     if (!selectedTicket) return;
-    if (!window.confirm("Bạn chắc chắn muốn hủy vé này?")) return;
     setActing(true);
     try {
       await cancelTicketByAdmin(selectedTicket.detail.id);

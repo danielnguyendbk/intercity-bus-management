@@ -48,9 +48,6 @@ export default function AdminDashboardPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleSyncDatabase = async () => {
-    if (!window.confirm("Bạn có chắc chắn muốn nạp bộ dữ liệu đầy đủ mới nhất (22 xe, 10 tuyến đường, 17 chuyến xe và 16.6 triệu doanh thu) vào cơ sở dữ liệu không?")) {
-      return;
-    }
     setIsSyncing(true);
     try {
       const res = await syncAdminDatabase();
