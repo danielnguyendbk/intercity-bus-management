@@ -527,8 +527,14 @@ class AdminService:
         t = db.query(Ticket).filter(Ticket.id == ticket_id).with_for_update().first()
         if not t:
             raise HTTPException(status_code=404, detail="Ticket not found")
-        if t.payment and t.payment.paymentMethod == "SEPAY" and t.payment.status != PaymentStatus.SUCCESS:
-            raise HTTPException(status_code=409, detail="Vui lòng chờ SePay xác nhận thanh toán trước khi xác nhận vé.")
+        if t.status in (TicketStatus.CANCELLED, TicketStatus.PAID):
+            raise HTTPException(status_code=400, detail="Trạng thái vé không hợp lệ để xác nhận.")
+
+        # Nếu vé có yêu cầu thanh toán SePay đang PENDING nhưng khách muốn giữ chỗ trả tiền mặt khi lên xe (COD)
+        if t.payment and t.payment.paymentMethod == "SEPAY" and t.payment.status == PaymentStatus.PENDING:
+            t.payment.paymentMethod = "COD"
+            t.payment.notes = "Chuyển sang thanh toán khi lên xe (Admin xác nhận giữ chỗ)"
+
         t.status = TicketStatus.CONFIRMED
         db.commit()
         db.refresh(t)

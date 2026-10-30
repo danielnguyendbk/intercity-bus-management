@@ -160,7 +160,7 @@ const AdminTicketsPage: React.FC = () => {
       );
       toast.success("Đã xác nhận giữ chỗ thành công!");
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Xác nhận vé thất bại");
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || "Xác nhận vé thất bại");
     } finally {
       setActionTicketId(null);
     }
@@ -183,7 +183,7 @@ const AdminTicketsPage: React.FC = () => {
       );
       toast.success("Đã xác nhận thanh toán thành công!");
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Cập nhật thanh toán thất bại");
+      toast.error(err?.response?.data?.detail || err?.response?.data?.message || "Cập nhật thanh toán thất bại");
     } finally {
       setActionTicketId(null);
     }

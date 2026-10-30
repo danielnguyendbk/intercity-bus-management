@@ -179,17 +179,24 @@ class SePayTests(unittest.TestCase):
             self.assertEqual(client.post("/api/private/payment/vnpay/create", json={"ticketId": 1}).status_code, 404)
             self.assertEqual(client.put("/api/private/tickets/1/pay", json={"paymentMethod": "SEPAY"}).status_code, 404)
 
-    def test_admin_cannot_manually_confirm_sepay_payment(self):
+    def test_admin_can_convert_pending_sepay_to_cash_or_cod(self):
         payment = self.checkout()
         app.dependency_overrides[get_db] = lambda: self.db
         app.dependency_overrides[require_staff] = lambda: self.user
         with TestClient(app) as client:
-            for action in ("mark-paid", "confirm"):
-                response = client.put(f"/api/admin/tickets/1/{action}")
-                self.assertEqual(response.status_code, 409)
-                self.assertEqual(self.ticket.status, TicketStatus.HOLD)
-                self.assertEqual(payment.status, PaymentStatus.PENDING)
-                self.assertIsNone(self.ticket.paidAt)
+            # Xác nhận giữ chỗ chuyển SePay PENDING sang COD
+            response_confirm = client.put("/api/admin/tickets/1/confirm")
+            self.assertEqual(response_confirm.status_code, 200)
+            self.assertEqual(self.ticket.status, TicketStatus.CONFIRMED)
+            self.assertEqual(payment.paymentMethod, "COD")
+
+            # Xác nhận thu tiền mặt chuyển sang CASH và PAID
+            response_paid = client.put("/api/admin/tickets/1/mark-paid")
+            self.assertEqual(response_paid.status_code, 200)
+            self.assertEqual(self.ticket.status, TicketStatus.PAID)
+            self.assertEqual(payment.paymentMethod, "CASH")
+            self.assertEqual(payment.status, PaymentStatus.SUCCESS)
+            self.assertIsNotNone(self.ticket.paidAt)
 
     def test_configured_webhook_aliases_share_auth_and_settlement(self):
         transaction = self.transaction()

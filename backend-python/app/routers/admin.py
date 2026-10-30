@@ -501,15 +501,32 @@ def mark_ticket_paid(ticket_id: int, db: Session = Depends(get_db)):
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).with_for_update().first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if ticket.payment and ticket.payment.paymentMethod == "SEPAY":
-        raise HTTPException(status_code=409, detail="Vé SePay chỉ được cập nhật thanh toán từ giao dịch SePay đã xác minh, không xác nhận thủ công.")
+    if ticket.status == TicketStatus.CANCELLED:
+        raise HTTPException(status_code=400, detail="Không thể thu tiền vé đã bị hủy.")
+
+    now = datetime.now()
     ticket.status = TicketStatus.PAID
-    ticket.paidAt = datetime.now()
+    ticket.paidAt = now
+
     if not ticket.payment:
-        ticket.payment = Payment(amount=ticket.price, paymentMethod="CASH", status=PaymentStatus.SUCCESS, paidAt=datetime.now())
+        ticket.payment = Payment(
+            amount=ticket.price,
+            paymentMethod="CASH",
+            status=PaymentStatus.SUCCESS,
+            paidAt=now,
+            notes="Thanh toán tiền mặt trực tiếp"
+        )
     else:
-        ticket.payment.status = PaymentStatus.SUCCESS
-        ticket.payment.paidAt = datetime.now()
+        # Nếu vé đã thanh toán qua SePay thành công thì giữ nguyên
+        if ticket.payment.paymentMethod == "SEPAY" and ticket.payment.status == PaymentStatus.SUCCESS:
+            pass
+        else:
+            # Cho phép chuyển từ PENDING SePay/khác sang thanh toán tiền mặt (CASH)
+            ticket.payment.paymentMethod = "CASH"
+            ticket.payment.status = PaymentStatus.SUCCESS
+            ticket.payment.paidAt = now
+            ticket.payment.notes = "Xác nhận thanh toán tiền mặt bởi Admin"
+
     db.commit()
     return {"message": "Ticket marked as paid successfully", "id": ticket_id, "status": TicketStatus.PAID.value}
 

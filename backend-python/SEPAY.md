@@ -28,8 +28,7 @@ hay API tạo VA theo đơn hàng. COD vẫn thanh toán qua nhân viên.
 5. Sau khi commit, backend gửi SSE `payment.sepay.success` đến admin.
 
 Khách không có nút/API tự xác nhận đã chuyển tiền. Tạo QR và đọc trạng thái không
-đánh dấu đã thanh toán. API admin cũng chặn đánh dấu trả tiền thủ công cho SePay
-và chặn xác nhận vé SePay chưa thanh toán; xác nhận tiền mặt/COD vẫn được giữ.
+đánh dấu đã thanh toán. Khi khách hàng chuyển sang thanh toán tiền mặt (hoặc lên xe trả tiền COD), Admin có thể xác nhận giữ chỗ (chuyển sang COD) hoặc bấm 'Đã thu tiền' (chuyển sang CASH) để hoàn tất vé. Các giao dịch SePay đã PAID trước đó được bảo toàn.
 
 API token phải có hiệu lực để truy vấn giao dịch. Khi API SePay không truy cập được,
 webhook trả 502 để SePay gửi lại; không tự đánh dấu đã trả tiền.
