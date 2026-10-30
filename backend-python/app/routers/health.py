@@ -27,6 +27,7 @@ def health_check():
 
     return {
         "status": "UP",
+        "version": "v2-allow-cash-confirm",
         "database": db_status,
         "database_target": db_url_masked,
         "database_error": db_error,
