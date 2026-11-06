@@ -21,6 +21,7 @@ from app.schemas.admin import (
     EmployeeDTO, CargoDTO
 )
 from app.core.security import get_password_hash
+from app.core.timezone import with_vietnam_timezone
 
 class AdminService:
     @staticmethod
@@ -515,7 +516,7 @@ class AdminService:
                 status=t.status.value if (t.status and hasattr(t.status, "value")) else str(t.status or ""),
                 paymentMethod=pm_str,
                 paymentStatus=ps_str,
-                bookedAt=t.bookedAt,
+                bookedAt=with_vietnam_timezone(t.bookedAt),
                 ticketCode=t_code,
                 pickupPoint=t.pickupPoint,
                 dropoffPoint=t.dropoffPoint

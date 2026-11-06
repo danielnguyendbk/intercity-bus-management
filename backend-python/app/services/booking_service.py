@@ -16,6 +16,7 @@ from app.schemas.trips_tickets import (
 )
 from app.services.sse_service import broker
 from app.core.config import settings
+from app.core.timezone import vietnam_now, with_vietnam_timezone
 
 class BookingService:
     @staticmethod
@@ -186,6 +187,7 @@ class BookingService:
 
     @staticmethod
     def book_ticket(request: BookTicketRequest, current_user: User, db: Session) -> TicketResponse:
+        booked_at = vietnam_now()
         trip = db.query(Trip).filter(Trip.id == request.tripId).first()
         if not trip:
             raise HTTPException(status_code=404, detail="Trip not found")
@@ -215,7 +217,7 @@ class BookingService:
             ticket.booked_by = current_user.id
             ticket.price = trip.route.basePrice
             ticket.status = TicketStatus.HOLD
-            ticket.bookedAt = datetime.now()
+            ticket.bookedAt = booked_at
             ticket.paidAt = None
         else:
             ticket = Ticket(
@@ -224,7 +226,7 @@ class BookingService:
                 price=trip.route.basePrice,
                 status=TicketStatus.HOLD,
                 booked_by=current_user.id,
-                bookedAt=datetime.now()
+                bookedAt=booked_at
             )
             db.add(ticket)
 
@@ -263,7 +265,7 @@ class BookingService:
                     "status": ticket.status.value,
                     "pickupPoint": ticket.pickupPoint,
                     "dropoffPoint": ticket.dropoffPoint,
-                    "bookedAt": ticket.bookedAt.isoformat() if ticket.bookedAt else None
+                    "bookedAt": with_vietnam_timezone(ticket.bookedAt).isoformat() if ticket.bookedAt else None
                 }))
         except Exception:
             pass
@@ -336,7 +338,7 @@ class BookingService:
             passengerEmail=passenger.email if passenger else "",
             price=ticket.price,
             status=ticket.status.value,
-            bookedAt=ticket.bookedAt,
+            bookedAt=with_vietnam_timezone(ticket.bookedAt),
             paidAt=ticket.paidAt,
             paymentId=payment.id if payment else None,
             paymentMethod=(

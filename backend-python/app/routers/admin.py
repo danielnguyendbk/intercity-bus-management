@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 
 from app.core.database import get_db
+from app.core.timezone import with_vietnam_timezone
 from app.dependencies import require_admin, require_staff, get_current_user
 from app.models.user import User
 from app.models.bus import Trip, Route, Bus, TripStatus, BusStatus, BusType
@@ -292,7 +293,7 @@ def get_trip_detail(trip_id: int, db: Session = Depends(get_db)):
         passenger = ticket.passenger if ticket else None
         seats.append({"id": seat.id, "seatNumber": seat.seatNumber, "positionX": seat.positionX, "positionY": seat.positionY, "booked": ticket is not None, "bookedBy": passenger.phone if passenger else "", "passengerName": passenger.fullName if passenger else ""})
         if ticket:
-            tickets.append({"id": ticket.id, "seatNumber": seat.seatNumber, "passengerName": passenger.fullName if passenger else "", "passengerPhone": passenger.phone if passenger else "", "price": ticket.price, "status": ticket.status.value, "bookedAt": ticket.bookedAt, "pickupPoint": ticket.pickupPoint, "dropoffPoint": ticket.dropoffPoint, "paymentMethod": ticket.payment.paymentMethod.value if ticket.payment and hasattr(ticket.payment.paymentMethod, "value") else (ticket.payment.paymentMethod if ticket.payment else None), "paymentStatus": ticket.payment.status.value if ticket.payment else None, "paidAt": ticket.paidAt})
+            tickets.append({"id": ticket.id, "seatNumber": seat.seatNumber, "passengerName": passenger.fullName if passenger else "", "passengerPhone": passenger.phone if passenger else "", "price": ticket.price, "status": ticket.status.value, "bookedAt": with_vietnam_timezone(ticket.bookedAt), "pickupPoint": ticket.pickupPoint, "dropoffPoint": ticket.dropoffPoint, "paymentMethod": ticket.payment.paymentMethod.value if ticket.payment and hasattr(ticket.payment.paymentMethod, "value") else (ticket.payment.paymentMethod if ticket.payment else None), "paymentStatus": ticket.payment.status.value if ticket.payment else None, "paidAt": ticket.paidAt})
     route = trip.route
     bus = trip.bus
     trip_data = _trip_response(trip)
@@ -480,7 +481,7 @@ def get_ticket_detail(ticket_id: int, db: Session = Depends(get_db)):
         "seat": {"id": ticket.seat.id, "seatNumber": ticket.seat.seatNumber, "positionX": ticket.seat.positionX, "positionY": ticket.seat.positionY} if ticket.seat else None,
         "passenger": {"id": passenger.id, "fullName": passenger.fullName, "phone": passenger.phone, "email": passenger.email or "", "idCard": passenger.idCard or ""} if passenger else None,
         "price": ticket.price, "status": ticket.status.value if ticket.status else "", "user": {"id": ticket.user.id, "username": ticket.user.username, "role": ticket.user.role.name if ticket.user and ticket.user.role else ""} if ticket.user else None,
-        "bookedAt": ticket.bookedAt, "paidAt": ticket.paidAt,
+        "bookedAt": with_vietnam_timezone(ticket.bookedAt), "paidAt": ticket.paidAt,
         "payment": {"id": payment.id, "amount": payment.amount, "paymentMethod": payment.paymentMethod.value if hasattr(payment.paymentMethod, "value") else payment.paymentMethod, "status": payment.status.value, "transactionCode": payment.transactionCode, "paidAt": payment.paidAt} if payment else None,
     }
 
